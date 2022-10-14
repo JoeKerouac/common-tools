@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!-- 不对下面几个文件检查字符串重复定义的问题 -->
+    <suppress files="JavaTypeUtil.java" checks="MultipleStringLiterals"/>
+    <suppress files="DateUtil.java" checks="MultipleStringLiterals"/>
+    <suppress files="MethodMetadata.java" checks="MultipleStringLiterals"/>
+</suppressions>

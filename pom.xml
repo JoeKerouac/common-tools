@@ -1,0 +1,583 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.github.JoeKerouac</groupId>
+    <artifactId>common-tools</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>common-tools</name>
+    <description>各种常用工具</description>
+    <url>https://github.com/JoeKerouac/commons-tools</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/JoeKerouac/commons-tools</url>
+        <connection>scm:git:https://github.com/JoeKerouac/commons-tools.git</connection>
+        <developerConnection>scm:git:https://github.com/JoeKerouac/commons-tools.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>JoeKerouac</name>
+            <email>1213812243@qq.com</email>
+        </developer>
+    </developers>
+
+    <properties>
+        <build.java.version>1.8</build.java.version>
+        <!-- 项目编码 -->
+        <project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
+        <!-- 原始源码目录，我们后边要将源码目录切换到delombok.dir中 -->
+        <origin.source.dir>src/main/java</origin.source.dir>
+        <!-- 打包生成source时使用的目录 -->
+        <source.generate.dir>src/main/java</source.generate.dir>
+        <!-- lombok生成源码的目录 -->
+        <delombok.dir>${project.build.directory}/delombok</delombok.dir>
+        <format.action>format</format.action>
+        <jacoco.version>0.8.6</jacoco.version>
+        <checkstyle.version>3.1.1</checkstyle.version>
+        <spotbugs.version>4.1.4</spotbugs.version>
+        <!-- jacoco的行覆盖率最小值 -->
+        <jacoco.coveredratio.line>0.50</jacoco.coveredratio.line>
+        <lombok.version>1.18.10</lombok.version>
+        <license.maven.plugin>3.0</license.maven.plugin>
+
+        <validation-api.version>2.0.1.Final</validation-api.version>
+        <jackson.version>2.10.0</jackson.version>
+        <dom4j.version>1.6.1</dom4j.version>
+        <httpclient.version>5.0.3</httpclient.version>
+        <slf4j.version>1.7.5</slf4j.version>
+        <testng.version>6.14.3</testng.version>
+        <hibernate.validator.version>6.0.18.Final</hibernate.validator.version>
+        <bcprov.version>1.46</bcprov.version>
+        <el.version>3.0.0</el.version>
+        <oss.version>3.10.2</oss.version>
+        <commons-pool2.version>2.8.1</commons-pool2.version>
+        <byte-buddy.version>1.9.3</byte-buddy.version>
+        <cglib.version>3.2.5</cglib.version>
+        <ognl.version>3.2.14</ognl.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>${dom4j.version}</version>
+        </dependency>
+
+        <!-- 网络请求必须 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>${httpclient.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Java验证框架 -->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>${validation-api.version}</version>
+        </dependency>
+        <!-- 校验必须 -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${hibernate.validator.version}</version>
+        </dependency>
+        <!-- hibernate必须依赖 -->
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
+            <version>${el.version}</version>
+        </dependency>
+
+        <!-- 加密包 -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk16</artifactId>
+            <version>${bcprov.version}</version>
+        </dependency>
+
+        <!-- 对象池 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+            <version>${commons-pool2.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 动态代理使用 -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>${byte-buddy.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!--CGLIB依赖包，生成测试类使用-->
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>${cglib.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 如果需要使用OssResource时才需要引入 -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${oss.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ognl依赖包 -->
+        <dependency>
+            <groupId>ognl</groupId>
+            <artifactId>ognl</artifactId>
+            <version>${ognl.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 测试自定义apollo客户端用 -->
+        <dependency>
+            <groupId>com.ctrip.framework.apollo</groupId>
+            <artifactId>apollo-mockserver</artifactId>
+            <version>1.7.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- 使用delombok生成的源码目录作为项目的源码目录，主要在生成源码的时候使用 -->
+        <sourceDirectory>${source.generate.dir}</sourceDirectory>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>${build.java.version}</source>
+                    <target>${build.java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerArgs>
+                        <!-- 不对项目中使用过时API的行为警告 -->
+                        <arg>-Xlint:deprecation</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- site插件显式声明，做一些个性化配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.9.0</version>
+                <configuration>
+                    <!-- 指定环境为中文环境 -->
+                    <locales>zh</locales>
+                    <!-- 指定输出目录 -->
+                    <outputDirectory>${project.build.directory}/site</outputDirectory>
+                    <relativizeDecorationLinks>false</relativizeDecorationLinks>
+                </configuration>
+            </plugin>
+
+            <!-- 代码格式化插件，自动格式化代码使之格式统一 -->
+            <plugin>
+                <groupId>net.revelc.code.formatter</groupId>
+                <artifactId>formatter-maven-plugin</artifactId>
+                <version>2.13.0</version>
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <configFile>${project.basedir}/Formatter.xml</configFile>
+                    <sourceDirectory>${origin.source.dir}</sourceDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>${format.action}</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 测试用例需要 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
+            </plugin>
+
+            <!-- 添加license头 -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${license.maven.plugin}</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>remove</goal>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <quiet>true</quiet>
+                    <header>HEADER</header>
+                    <includes>
+                        <include>**/src/main/java/**</include>
+                        <include>**/src/test/java/**</include>
+                    </includes>
+                    <strictCheck>true</strictCheck>
+                    <mapping>
+                        <java>SLASHSTAR_STYLE</java>
+                    </mapping>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>${maven.repo.id}</id>
+            <name>maven仓库</name>
+            <url>${maven.snapshot.repo}</url>
+        </snapshotRepository>
+        <repository>
+            <id>${maven.repo.id}</id>
+            <name>maven仓库</name>
+            <url>${maven.repo}</url>
+        </repository>
+    </distributionManagement>
+
+    <profiles>
+        <!-- 如果需要将构建发布到私服，请配置虾米那的环境变量，发布时激活该profile即可 -->
+        <profile>
+            <id>local</id>
+            <properties>
+                <maven.repo.id>nexus</maven.repo.id>
+                <maven.repo>${env.MVN_REPO}</maven.repo>
+                <maven.snapshot.repo>${env.MVN_SNAPSHOTS_REPO}</maven.snapshot.repo>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>central</id>
+            <properties>
+                <maven.repo.id>maven-central</maven.repo.id>
+                <maven.repo>https://oss.sonatype.org/service/local/staging/deploy/maven2</maven.repo>
+                <maven.snapshot.repo>https://oss.sonatype.org/content/repositories/snapshots</maven.snapshot.repo>
+            </properties>
+        </profile>
+
+        <profile>
+            <!-- 发布profile -->
+            <id>release</id>
+
+            <properties>
+                <!-- 发布阶段将format的功能切换为验证而不是格式化 -->
+                <format.action>validate</format.action>
+                <source.generate.dir>${delombok.dir}</source.generate.dir>
+            </properties>
+
+            <build>
+                <plugins>
+                    <!-- lombok插件，用于将源码中的lombok相关注解替换为对应的代码 -->
+                    <plugin>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok-maven-plugin</artifactId>
+                        <version>1.18.16.0</version>
+                        <configuration>
+                            <encoding>${project.build.sourceEncoding}</encoding>
+                            <!-- 指定要解除lombok注释的代码在这个目录中 -->
+                            <sourceDirectory>${origin.source.dir}</sourceDirectory>
+                            <!--
+                                delombok后的源码默认是输出到target/generated-sources/delombok目录中的，这里我们修改输出到我们指定的目录，因为
+                                如果输出到target/generated-sources中会导致IDEA也将其识别为源码，最终就是导致IDEA报错，因为class重复
+                            -->
+                            <outputDirectory>${delombok.dir}</outputDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>delombok</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- check style插件，对源码进行扫描 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>${checkstyle.version}</version>
+                        <configuration>
+                            <!-- 注意，我们要对原始源码进行check style检查，而不是当前delombok生成的源码，所以这里要手动切换目录 -->
+                            <sourceDirectories>${origin.source.dir}</sourceDirectories>
+                            <configLocation>checkstyle.xml</configLocation>
+                            <encoding>${project.build.sourceEncoding}</encoding>
+                            <consoleOutput>true</consoleOutput>
+                            <failsOnError>true</failsOnError>
+                            <linkXRef>false</linkXRef>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- 覆盖率统计，jacoco用法参照：https://www.eclemma.org/jacoco/trunk/doc/maven.html -->
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>default-prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>default-report</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <title>common-tools测试用例覆盖率报告</title>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- 指标检查 -->
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <!-- 行覆盖率检查 -->
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>${jacoco.coveredratio.line}</minimum>
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Source -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.2.1</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Javadoc -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <encoding>${project.build.sourceEncoding}</encoding>
+                            <!-- jdk1.8要加上，1.7要去掉，否则会报错 -->
+                            <additionalJOptions>
+                                <additionalJOption>${javadoc.opts}</additionalJOption>
+                            </additionalJOptions>
+                        </configuration>
+                    </plugin>
+
+                    <!-- spotbugs检查（findbugs的替代品），spotbugs运行在编译后，对class文件进行扫描 -->
+                    <!-- 错误描述页面：https://spotbugs.readthedocs.io/en/latest/bugDescriptions.html -->
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>${spotbugs.version}</version>
+                        <configuration>
+                            <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+                            <effort>Max</effort>
+                            <!-- 如果bug级别大于等于该值将阻断流程 -->
+                            <threshold>High</threshold>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>verify</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Gpg Signature -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- 禁用注释检查 -->
+        <profile>
+            <id>disable-javadoc-doclint</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <javadoc.opts>-Xdoclint:none</javadoc.opts>
+            </properties>
+        </profile>
+    </profiles>
+
+    <reporting>
+        <plugins>
+            <!-- 项目基本信息report -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>3.1.1</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>index</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+
+            <!-- jacoco报告，依赖于build结果 -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <!-- 单独的报告 -->
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+                <configuration>
+                    <title>测试用例覆盖率报告</title>
+                    <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
+                </configuration>
+            </plugin>
+
+            <!-- check-style的报告 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${checkstyle.version}</version>
+                <configuration>
+                    <!-- 配置规则文件 -->
+                    <configLocation>checkstyle.xml</configLocation>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>checkstyle</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+
+            <!-- findBug报告，因为是运行在class文件上，所以需要先compile -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.version}</version>
+            </plugin>
+
+            <!-- 测试用例执行报告，依赖于测试用例结果，所以需要先跑测试用例，然后这个才会生成报告 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>3.0.0-M7</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <!-- 注意，这里只报告，不要选择report，否则这里会重复执行一次测试用例 -->
+                            <report>report-only</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+                <configuration>
+                    <title>测试报告</title>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+</project>
