@@ -30,6 +30,18 @@ public class Assert {
      *
      * @param arg
      *            参数
+     */
+    public static void argNotNull(Object arg) {
+        if (arg == null) {
+            throw new IllegalArgumentException("must not be null");
+        }
+    }
+
+    /**
+     * 断言参数不能为空
+     *
+     * @param arg
+     *            参数
      * @param argName
      *            参数名
      */

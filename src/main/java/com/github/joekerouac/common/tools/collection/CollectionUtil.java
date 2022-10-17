@@ -13,9 +13,7 @@
 package com.github.joekerouac.common.tools.collection;
 
 import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 import lombok.AccessLevel;
@@ -30,6 +28,33 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CollectionUtil {
+
+    /**
+     * 矩阵转置（矩阵必须每行的列数都一样）（行变列，列变行）
+     *
+     * @param datas
+     *            要转置的数据
+     * @param <T>
+     *            数据类型
+     * @since 2.0.0
+     * @return 转置后的矩阵，例如[[01,02][11,12]]会变为[[01,11],[02,12]]
+     */
+    public static <T> List<List<T>> matrixTransform(List<List<T>> datas) {
+        if (datas.size() == 0 || datas.get(0).size() == 0) {
+            return datas;
+        }
+        int column = datas.size();
+        int row = datas.get(0).size();
+        List<List<T>> newData = new ArrayList<>(row);
+        for (int i = 0; i < row; i++) {
+            List<T> list = new ArrayList<>(column);
+            for (int j = 0; j < column; j++) {
+                list.add(datas.get(j).get(i));
+            }
+            newData.add(list);
+        }
+        return newData;
+    }
 
     /**
      * map转换，将map的value按照指定方式转换为新的value然后返回转换后的map

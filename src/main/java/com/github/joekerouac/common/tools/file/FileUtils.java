@@ -22,8 +22,9 @@ import java.util.List;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
+import com.github.joekerouac.common.tools.function.Filter;
 import com.github.joekerouac.common.tools.io.IOUtils;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
@@ -152,6 +153,19 @@ public class FileUtils {
      * @return 文件夹中所有文件（不包含本文件夹）
      */
     public static List<File> listFiles(File file) {
+        return listFiles(file, null);
+    }
+
+    /**
+     * 遍历文件夹
+     *
+     * @param file
+     *            文件夹
+     * @param filter
+     *            过滤函数，返回false时跳过该文件，PS：可能是文件，也可能是目录
+     * @return 文件夹中所有文件（不包含本文件夹）
+     */
+    public static List<File> listFiles(File file, Filter<File> filter) {
         if (!file.exists() || file.isFile()) {
             return new ArrayList<>(0);
         }
@@ -162,9 +176,16 @@ public class FileUtils {
             return new ArrayList<>(0);
         }
 
+        @SuppressWarnings("unchecked")
+        Filter<File> usedFilter = filter == null ? (Filter<File>)Filter.TRUE : filter;
+
         List<File> list = new ArrayList<>();
 
         for (File nowFile : files) {
+            if (!usedFilter.filter(nowFile)) {
+                continue;
+            }
+
             // 将子文件（可能是文件，也可能是目录）添加进来
             list.add(nowFile);
             // 如果子文件是目录，则继续遍历
