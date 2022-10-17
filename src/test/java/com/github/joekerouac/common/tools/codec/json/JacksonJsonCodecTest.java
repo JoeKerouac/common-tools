@@ -46,7 +46,7 @@ public class JacksonJsonCodecTest {
         JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
 
         return new Object[][] {{jacksonJsonSerialization, new ResourceHolder(new URLResource("test.jar", "test.jar"),
-            new FileResource("/root/test/test.jar"), new ClassPathResource("Formatter.xml"))}};
+            new FileResource("/root/test/test.jar"), new ClassPathResource("sql-error-codes.xml"))}};
     }
 
     @Data
