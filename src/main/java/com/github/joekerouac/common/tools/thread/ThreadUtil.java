@@ -58,7 +58,9 @@ public class ThreadUtil {
         while (true) {
             try {
                 long sleep = end - System.currentTimeMillis();
-                Thread.sleep(sleep);
+                if (sleep > 0) {
+                    Thread.sleep(sleep);
+                }
                 return;
             } catch (InterruptedException interruptedException) {
                 // 异常忽略
