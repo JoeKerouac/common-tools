@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.JoeKerouac</groupId>
     <artifactId>common-tools</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
     <name>common-tools</name>
     <description>各种常用工具</description>
