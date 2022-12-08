@@ -73,7 +73,6 @@ public class JsonUtil {
      * @throws SerializeException
      *             序列化失败应该抛出SerializeException而不是其他异常
      */
-    @Deprecated
     public static <T> T read(String data, Class<T> type) throws SerializeException {
         return CODER.read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, type);
     }
