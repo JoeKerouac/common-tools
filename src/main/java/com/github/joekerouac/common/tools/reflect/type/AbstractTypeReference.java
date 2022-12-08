@@ -24,7 +24,7 @@ import java.lang.reflect.Type;
  */
 public abstract class AbstractTypeReference<T> {
 
-    protected final Type type;
+    protected final Type _type;
 
     protected AbstractTypeReference() {
         Type superClass = getClass().getGenericSuperclass();
@@ -40,10 +40,10 @@ public abstract class AbstractTypeReference<T> {
          *   workarounds for valid case(s) and/or error to throw
          *   on invalid one(s).
          */
-        type = ((ParameterizedType)superClass).getActualTypeArguments()[0];
+        _type = ((ParameterizedType)superClass).getActualTypeArguments()[0];
     }
 
     public Type getType() {
-        return type;
+        return _type;
     }
 }

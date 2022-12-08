@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.util;
 
+import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -113,7 +114,7 @@ public class IDCardUtil {
         }
 
         // 验证最后一位加权码
-        byte[] idCardByte = idCard.getBytes();
+        byte[] idCardByte = idCard.getBytes(Charset.defaultCharset());
         int mod = calcMod(idCard);
         int calcLast = DIVISOR[mod];
         char last;
@@ -243,7 +244,7 @@ public class IDCardUtil {
      */
     private static int calcMod(String card) {
         // 生成最后一位校验码
-        byte[] idCardByte = card.getBytes();
+        byte[] idCardByte = card.getBytes(Charset.defaultCharset());
         int sum = 0;
         for (int j = 0; j < 17; j++) {
             sum += (((int)idCardByte[j]) - 48) * POWER[j];

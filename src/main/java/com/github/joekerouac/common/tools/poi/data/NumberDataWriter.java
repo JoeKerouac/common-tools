@@ -28,7 +28,7 @@ public final class NumberDataWriter implements ExcelDataWriter<Number> {
 
     @Override
     public void write(Cell cell, Number data) {
-        cell.setCellValue(data == null ? null : data.doubleValue());
+        cell.setCellValue(data == null ? 0 : data.doubleValue());
     }
 
     @Override

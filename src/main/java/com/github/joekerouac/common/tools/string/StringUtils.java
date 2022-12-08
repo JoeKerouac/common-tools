@@ -12,6 +12,12 @@
  */
 package com.github.joekerouac.common.tools.string;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+
+import javax.validation.constraints.NotNull;
+
 import org.slf4j.helpers.MessageFormatter;
 
 import com.github.joekerouac.common.tools.util.Assert;
@@ -26,6 +32,26 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class StringUtils {
+
+    /**
+     * 将指定字符集的数据转换为另外一个字符集
+     *
+     * @param data
+     *            数据
+     * @param charset
+     *            当前数据字符集
+     * @param resultCharset
+     *            结果数据集
+     * @return utf8字符集的数据
+     */
+    public static byte[] convert(@NotNull byte[] data, @NotNull Charset charset, @NotNull Charset resultCharset) {
+        byte[] result = data;
+        if (!resultCharset.equals(charset)) {
+            CharBuffer decode = charset.decode(ByteBuffer.wrap(data));
+            result = resultCharset.encode(decode).array();
+        }
+        return result;
+    }
 
     /**
      * 查找第count个指定code在str中的位置，例如str是123132412，code是3，count是2，那么返回的index是4；

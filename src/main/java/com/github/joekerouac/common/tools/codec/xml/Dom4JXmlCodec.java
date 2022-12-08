@@ -14,6 +14,8 @@ package com.github.joekerouac.common.tools.codec.xml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,8 +30,8 @@ import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
 import com.github.joekerouac.common.tools.codec.xml.converter.XmlTypeConverterUtil;
 import com.github.joekerouac.common.tools.constant.Const;
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.reflect.AccessorUtil;
 import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.reflect.bean.BeanUtils;
@@ -795,18 +797,18 @@ public class Dom4JXmlCodec implements Codec {
     }
 
     @Override
-    public <T> T read(byte[] data, Class<T> type) throws SerializeException {
-        return parse(new String(data, Const.DEFAULT_CHARSET), type);
+    public <T> T read(byte[] data, Charset charset, Class<T> type) throws SerializeException {
+        return parse(new String(data, charset == null ? StandardCharsets.UTF_8 : charset), type);
     }
 
     @Override
-    public <T> T read(byte[] data, AbstractTypeReference<T> typeReference) throws SerializeException {
+    public <T> T read(byte[] data, Charset charset, AbstractTypeReference<T> typeReference) throws SerializeException {
         throw new CommonException(ErrorCodeEnum.CODE_ERROR, "不支持的方法");
     }
 
     @Override
-    public byte[] write(Object data) {
-        return toXml(data).getBytes(Const.DEFAULT_CHARSET);
+    public byte[] write(Object data, Charset charset) {
+        return toXml(data).getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
     }
 
     /**

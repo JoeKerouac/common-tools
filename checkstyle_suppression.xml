@@ -9,4 +9,8 @@
     <suppress files="JavaTypeUtil.java" checks="MultipleStringLiterals"/>
     <suppress files="DateUtil.java" checks="MultipleStringLiterals"/>
     <suppress files="MethodMetadata.java" checks="MultipleStringLiterals"/>
+    <!-- 不对console util正则校验，里边有使用System.out的 -->
+    <suppress files="ConsoleUtil.java" checks="Regexp"/>
+    <!-- 不对AbstractTypeReference进行字段名校验，里边的_type字段加了_前缀 -->
+    <suppress files="AbstractTypeReference.java" checks="MemberName"/>
 </suppressions>
