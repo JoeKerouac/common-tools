@@ -13,6 +13,7 @@
 package com.github.joekerouac.common.tools.util;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -117,6 +118,27 @@ public class JsonUtil {
     }
 
     /**
+     * 读取数据
+     *
+     * @param data
+     *            数据
+     * @param typeReference
+     *            数据类型引用
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    public static <T> T read(String data, AbstractTypeReference<T> typeReference) throws SerializeException {
+        if (StringUtils.isBlank(data)) {
+            return null;
+        }
+
+        return CODER.read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, typeReference);
+    }
+
+    /**
      * 写出数据
      * 
      * @param data
@@ -139,6 +161,19 @@ public class JsonUtil {
      */
     public static byte[] write(Object data, Charset resultCharset) {
         return CODER.write(data, resultCharset);
+    }
+
+    /**
+     * 写出数据
+     *
+     * @param data
+     *            数据
+     * @param resultCharset
+     *            结果字符集
+     * @return 序列化后的数据
+     */
+    public static String writeAsString(Object data, Charset resultCharset) {
+        return new String(CODER.write(data, resultCharset), resultCharset);
     }
 
     /**
