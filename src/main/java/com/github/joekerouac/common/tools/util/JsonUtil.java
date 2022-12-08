@@ -65,6 +65,24 @@ public class JsonUtil {
      *
      * @param data
      *            数据
+     * @param type
+     *            数据类型Class
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    @Deprecated
+    public static <T> T read(String data, Class<T> type) throws SerializeException {
+        return CODER.read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, type);
+    }
+
+    /**
+     * 读取数据
+     *
+     * @param data
+     *            数据
      * @param charset
      *            数据对应的字符集，为空时默认使用utf8
      * @param type
