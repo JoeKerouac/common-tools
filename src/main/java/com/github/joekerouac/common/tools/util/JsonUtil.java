@@ -172,10 +172,12 @@ public class JsonUtil {
      *
      * @param data
      *            数据
+     * @param resultCharset
+     *            结果字符集
      * @return 序列化后的数据
      */
-    public static String writeAsString(Object data) {
-        return new String(CODER.write(data, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    public static byte[] write(Object data, Charset resultCharset) {
+        return CODER.write(data, resultCharset);
     }
 
     /**
@@ -183,12 +185,10 @@ public class JsonUtil {
      *
      * @param data
      *            数据
-     * @param resultCharset
-     *            结果字符集
      * @return 序列化后的数据
      */
-    public static byte[] write(Object data, Charset resultCharset) {
-        return CODER.write(data, resultCharset);
+    public static String writeAsString(Object data) {
+        return new String(CODER.write(data, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
     }
 
     /**
