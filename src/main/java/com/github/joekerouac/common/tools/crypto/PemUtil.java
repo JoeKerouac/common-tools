@@ -17,7 +17,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 
-import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.io.pem.PemReader;
 
 import com.github.joekerouac.common.tools.crypto.exception.CryptoException;
 import com.github.joekerouac.common.tools.io.IOUtils;
@@ -55,9 +55,9 @@ public class PemUtil {
      */
     @SuppressWarnings("unchecked")
     public static <T> T read(byte[] data) {
-        PEMReader reader = new PEMReader(new StringReader(new String(data, StandardCharsets.UTF_8)));
+        PemReader reader = new PemReader(new StringReader(new String(data, StandardCharsets.UTF_8)));
         try {
-            return (T)reader.readObject();
+            return (T)reader.readPemObject();
         } catch (IOException e) {
             // 数据格式不对时抛出该异常
             throw new CryptoException("pem数据读取失败", e);

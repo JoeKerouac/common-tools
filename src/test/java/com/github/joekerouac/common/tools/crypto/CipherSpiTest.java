@@ -57,6 +57,33 @@ public class CipherSpiTest {
         if (!Arrays.equals(data, decryptResult)) {
             throw new RuntimeException("加解密后数据不一致");
         }
+
+        if (desc.isGcm()) {
+            cipherSpi.init(key, iv, CipherSpi.ENCRYPT_MODE);
+            cipherSpi.doFinal(data);
+            Throwable ex = null;
+            try {
+                // 对于gcm模式来说，初始化一次只能加密一次，下次加密需要重新初始化，所以这里应该抛异常
+                cipherSpi.doFinal(data);
+            } catch (Throwable throwable) {
+                ex = throwable;
+            }
+            Assert.assertNotNull(ex);
+
+            ex = null;
+            try {
+                // 对于gcm模式来说，每次初始化iv应该修改，所以这里应该抛出异常
+                cipherSpi.init(key, iv, CipherSpi.ENCRYPT_MODE);
+            } catch (Throwable throwable) {
+                ex = throwable;
+            }
+            Assert.assertNotNull(ex);
+
+            // 我们上边初始化的iv所有字节为0，我们将iv的第一个byte修改为1，然后重新初始化cipher，此时应该就能加密成功了
+            iv[0] = 1;
+            cipherSpi.init(key, iv, CipherSpi.ENCRYPT_MODE);
+            cipherSpi.doFinal(data);
+        }
     }
 
     /**

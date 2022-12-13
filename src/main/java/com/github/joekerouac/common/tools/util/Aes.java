@@ -75,6 +75,8 @@ public class Aes {
             ExceptionProviderConst.IllegalArgumentExceptionProvider);
         Assert.assertTrue(desc.getIvLen() == iv.length, "iv格式不对",
             ExceptionProviderConst.IllegalArgumentExceptionProvider);
+        Assert.assertTrue(!desc.isGcm(), "gcm模式每次加密完需要重新初始化，并且变更iv，无法使用本工具",
+            ExceptionProviderConst.IllegalArgumentExceptionProvider);
 
         GenericObjectPoolConfig<CipherSpi> config = new GenericObjectPoolConfig<>();
         config.setMaxIdle(maxIdle);

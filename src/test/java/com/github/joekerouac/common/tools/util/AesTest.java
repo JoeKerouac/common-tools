@@ -32,19 +32,16 @@ public class AesTest {
         // 基本加解密测试
         byte[] baseData = "你好呀".getBytes(StandardCharsets.UTF_8);
         for (CipherDesc value : CipherDesc.values()) {
+            if (value.isGcm()) {
+                continue;
+            }
             Aes aes = new Aes(Aes.generateKey(value), Aes.generateIv(value), value);
             // AES固定16
             byte[] data = value.isHasPadding() ? baseData : pkcs7Padding(baseData);
             byte[] encrypt = aes.encrypt(data);
             // 对于GCM模式要测试是否可以重用
-            if (value.isGcm()) {
-                encrypt = aes.encrypt(data);
-            }
 
             byte[] decrypt = aes.decrypt(encrypt);
-            if (value.isGcm()) {
-                decrypt = aes.decrypt(encrypt);
-            }
 
             // 手动取消padding
             if (!value.isHasPadding()) {
