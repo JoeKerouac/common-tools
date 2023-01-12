@@ -29,7 +29,8 @@ public interface Interception {
     /**
      * 拦截点执行，可以使用invoker对父类方法发起调用；
      * 
-     * 注意，方法中需要处理Object自带方法，例如toString()，可以使用{@link MethodMetadata#isObjectMethod(Method)}来判断方法是不是object方法，如果是，则可以调用我们这里提供的invoker来处理，invoker中有默认实现，或者我们自己实现也可以；
+     * 注意，方法中需要处理Object自带方法，例如toString()，可以使用{@link MethodMetadata#isObjectMethod(Method)}来判断方法是不是object方法，如果
+     * 是，则可以调用我们这里提供的invoker来处理，invoker中有默认实现，或者我们自己实现也可以；
      * 
      * @param target
      *            代理的对象（如果是静态方法那么该target为null或者对class生成的代理）
@@ -78,7 +79,7 @@ public interface Interception {
         if (MethodMetadata.HASH_CODE_META.equals(methodMetadata)) {
             invoker = interception::hashCode;
         } else if (MethodMetadata.TO_STRING_META.equals(methodMetadata)) {
-            invoker = () -> proxyClass.getName() + "$$Proxy";
+            invoker = () -> interception + "$$Proxy";
         } else if (MethodMetadata.EQUALS_META.equals(methodMetadata)) {
             invoker = () -> {
                 if (params[0] instanceof ProxyParent) {
