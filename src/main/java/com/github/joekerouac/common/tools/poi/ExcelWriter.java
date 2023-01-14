@@ -436,7 +436,8 @@ public class ExcelWriter<DATA> {
 
         ExcelDataWriter excelDataWriter = decide(data.getClass());
         if (excelDataWriter == null) {
-            throw new UnsupportedOperationException("数据[" + data + "]没有对应的ExcelDataWriter");
+            throw new UnsupportedOperationException(
+                StringUtils.format("类型没有对应的ExcelDataWriter, type: [{}]", data.getClass()));
         }
 
         return new Writer(excelDataWriter, data);
