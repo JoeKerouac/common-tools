@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
@@ -118,6 +119,8 @@ public final class IHttpClient implements AutoCloseable {
         }
     };
 
+    private static final Supplier<HttpAsyncClientBuilder> HTTP_ASYNC_CLIENT_BUILDER_SUPPLIER = HttpAsyncClients::custom;
+
     /**
      * 连接验证间隔，单位秒，如果连接超过该间隔没有活动，需要重新验证连接然后才能给用户
      */
@@ -186,12 +189,14 @@ public final class IHttpClient implements AutoCloseable {
      */
     @Builder
     private IHttpClient(IHttpClientConfig config, CookieStore cookieStore, SSLContext sslcontext, boolean noRedirect,
-        Logger logger) {
+        Logger logger, Supplier<HttpAsyncClientBuilder> httpAsyncClientBuilderSupplier) {
         this.config = config == null ? new IHttpClientConfig() : config;
         CookieStore cookieStoreNotNull = cookieStore == null ? new CookieStoreImpl() : cookieStore;
         SSLContext sslContextNotNull = sslcontext == null ? SSLContexts.createSystemDefault() : sslcontext;
         this.logger = logger == null ? LOGGER : logger;
-        this.init(this.config, cookieStoreNotNull, sslContextNotNull, noRedirect);
+        Supplier<HttpAsyncClientBuilder> builderSupplier = httpAsyncClientBuilderSupplier == null
+            ? HTTP_ASYNC_CLIENT_BUILDER_SUPPLIER : httpAsyncClientBuilderSupplier;
+        this.init(this.config, cookieStoreNotNull, sslContextNotNull, noRedirect, builderSupplier);
     }
 
     /**
@@ -440,16 +445,25 @@ public final class IHttpClient implements AutoCloseable {
     }
 
     /**
-     * 初始化httpClient和CookieStore
-     *
+     * 初始化http client
+     * 
      * @param config
-     *            client配置信息
+     *            config
+     * @param cookieStore
+     *            cookie store
+     * @param sslcontext
+     *            ssl context
+     * @param noRedirect
+     *            是否自动重定向，true表示不重定向
+     * @param httpAsyncClientBuilderSupplier
+     *            HttpAsyncClientBuilder提供器
      */
-    private void init(IHttpClientConfig config, CookieStore cookieStore, SSLContext sslcontext, boolean noRedirect) {
+    private void init(IHttpClientConfig config, CookieStore cookieStore, SSLContext sslcontext, boolean noRedirect,
+        Supplier<HttpAsyncClientBuilder> httpAsyncClientBuilderSupplier) {
         logger.debug("正在初始化HttpClient");
 
         // 根据配置构建httpClient
-        HttpAsyncClientBuilder builder = HttpAsyncClients.custom();
+        HttpAsyncClientBuilder builder = httpAsyncClientBuilderSupplier.get();
 
         ThreadFactory threadFactory = config.getThreadFactory();
         if (threadFactory == null) {
