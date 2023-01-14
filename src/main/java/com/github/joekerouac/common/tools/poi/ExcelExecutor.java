@@ -47,6 +47,11 @@ import lombok.CustomLog;
 public final class ExcelExecutor {
 
     /**
+     * null数据写出函数
+     */
+    private static final Writer<?> NULL_WRITER = new Writer<>(new StringDataWriter(), "");
+
+    /**
      * 默认内存中最多多少行单元格
      */
     private static final int IN_MEMORY = 100;
@@ -479,11 +484,15 @@ public final class ExcelExecutor {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Writer<?> build(Object data) {
-        Optional<ExcelDataWriter<?>> dataBuilder =
-            writers.values().parallelStream().filter(excelData -> excelData.writeable(data)).limit(1).findFirst();
+        if (data == null) {
+            return NULL_WRITER;
+        }
 
-        ExcelDataWriter<?> writer =
-            dataBuilder.orElseThrow(() -> new UnsupportedOperationException("数据[" + data + "]没有对应的ExcelDataWriter"));
+        Optional<ExcelDataWriter<?>> dataBuilder = writers.values().parallelStream()
+            .filter(excelData -> excelData.writeable(data.getClass())).limit(1).findFirst();
+
+        ExcelDataWriter<?> writer = dataBuilder
+            .orElseThrow(() -> new UnsupportedOperationException("类型[" + data.getClass() + "]没有对应的ExcelDataWriter"));
         return new Writer(writer, data);
     }
 
