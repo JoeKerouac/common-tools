@@ -31,11 +31,6 @@ public class EnumDataWriter implements ExcelDataWriter<Enum> {
     }
 
     @Override
-    public boolean writeable(Object data) {
-        return (data instanceof Enum);
-    }
-
-    @Override
     public boolean writeable(Class<?> type) {
         if (type != null && type.equals(Enum.class)) {
             return true;

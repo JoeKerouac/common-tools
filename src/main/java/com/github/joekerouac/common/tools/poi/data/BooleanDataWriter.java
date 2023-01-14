@@ -29,11 +29,6 @@ public final class BooleanDataWriter implements ExcelDataWriter<Boolean> {
     }
 
     @Override
-    public boolean writeable(Object data) {
-        return (data instanceof Boolean);
-    }
-
-    @Override
     public boolean writeable(Class<?> type) {
         if (type == null) {
             return false;

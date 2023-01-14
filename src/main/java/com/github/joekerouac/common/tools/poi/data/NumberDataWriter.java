@@ -32,11 +32,6 @@ public final class NumberDataWriter implements ExcelDataWriter<Number> {
     }
 
     @Override
-    public boolean writeable(Object data) {
-        return (data instanceof Number);
-    }
-
-    @Override
     public boolean writeable(Class<?> type) {
         if (type != null && (Number.class.isAssignableFrom(type)
             || (JavaTypeUtil.isGeneralType(type) && !boolean.class.equals(type)))) {

@@ -12,8 +12,9 @@
  */
 package com.github.joekerouac.common.tools.poi.data;
 
-import com.github.joekerouac.common.tools.poi.ExcelDataWriter;
 import org.apache.poi.ss.usermodel.Cell;
+
+import com.github.joekerouac.common.tools.poi.ExcelDataWriter;
 
 /**
  * @author JoeKerouac
@@ -25,11 +26,6 @@ public class StringDataWriter implements ExcelDataWriter<String> {
     @Override
     public void write(Cell cell, String s) {
         cell.setCellValue(s);
-    }
-
-    @Override
-    public boolean writeable(Object data) {
-        return data == null || (data instanceof String);
     }
 
     @Override

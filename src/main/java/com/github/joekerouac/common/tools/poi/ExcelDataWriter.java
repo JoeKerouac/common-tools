@@ -33,15 +33,6 @@ public interface ExcelDataWriter<T> {
     void write(Cell cell, T data);
 
     /**
-     * 数据是否可写
-     *
-     * @param data
-     *            要写入的数据
-     * @return 返回true表示可写
-     */
-    boolean writeable(Object data);
-
-    /**
      * 数据类型是否可写
      *
      * @param type

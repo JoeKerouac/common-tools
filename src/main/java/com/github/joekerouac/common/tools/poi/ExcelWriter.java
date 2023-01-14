@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -56,7 +57,26 @@ public class ExcelWriter<DATA> {
      */
     private static final Comparator<Field> COMPARATOR;
 
+    /**
+     * 全局默认的Excel单元格数据类型
+     */
+    private static final Map<Class<?>, ExcelDataWriter<?>> DEFAULT_WRITERS;
+
+    /**
+     * null数据写出函数
+     */
+    private static final Writer<?> NULL_WRITER = new Writer<>(new StringDataWriter(), "");
+
     static {
+        Map<Class<?>, ExcelDataWriter<?>> writers = new HashMap<>();
+        writers.put(Boolean.class, new BooleanDataWriter());
+        writers.put(Calendar.class, new CalendarDataWriter());
+        writers.put(Date.class, new DateDataWriter());
+        writers.put(Enum.class, new EnumDataWriter());
+        writers.put(Number.class, new NumberDataWriter());
+        writers.put(String.class, new StringDataWriter());
+        DEFAULT_WRITERS = Collections.unmodifiableMap(writers);
+
         COMPARATOR = (f1, f2) -> {
             ExcelColumn c1 = f1.getAnnotation(ExcelColumn.class);
             ExcelColumn c2 = f2.getAnnotation(ExcelColumn.class);
@@ -78,7 +98,7 @@ public class ExcelWriter<DATA> {
     /**
      * 所有的Excel单元格数据类型
      */
-    private final Map<Class<?>, ExcelDataWriter<?>> writers = new HashMap<>();
+    private final Map<Class<?>, ExcelDataWriter<?>> writers = new ConcurrentHashMap<>();
 
     /**
      * 是否写出标题，如果为true，则每个sheet写入第一行数据前都会先写出标题
@@ -105,7 +125,7 @@ public class ExcelWriter<DATA> {
      *
      */
     public ExcelWriter() {
-        this(true, false, IN_MEMORY);
+        this(IN_MEMORY, true, false);
     }
 
     /**
@@ -115,46 +135,36 @@ public class ExcelWriter<DATA> {
      *            最多保留在内存中多少行
      */
     public ExcelWriter(int inMemory) {
-        this(true, false, inMemory);
+        this(inMemory, true, false);
     }
 
     /**
      * 构建器
      *
-     * @param hasTitle
-     *            是否写出标题，全局配置，后续还可以分别指定
      * @param inMemory
      *            最多保留在内存中多少行
+     * @param hasTitle
+     *            是否写出标题，全局配置，后续还可以分别指定
      */
-    public ExcelWriter(boolean hasTitle, int inMemory) {
-        this(hasTitle, false, inMemory);
+    public ExcelWriter(int inMemory, boolean hasTitle) {
+        this(inMemory, hasTitle, false);
     }
 
     /**
      * 构建器
-     * 
+     *
+     * @param inMemory
+     *            最多保留在内存中多少行
      * @param hasTitle
      *            是否写出标题，全局配置，后续还可以分别指定
      * @param transverse
      *            默认数据是按行写的，是否将数据按列写出，true表示按列写出（即竖着写）
-     * @param inMemory
-     *            最多保留在内存中多少行
      */
-    public ExcelWriter(boolean hasTitle, boolean transverse, int inMemory) {
+    public ExcelWriter(int inMemory, boolean hasTitle, boolean transverse) {
         this.hasTitle = hasTitle;
         this.transverse = transverse;
         this.wb = new SXSSFWorkbook(inMemory);
         this.flag = true;
-        init();
-    }
-
-    private void init() {
-        registerDataWriter(Boolean.class, new BooleanDataWriter());
-        registerDataWriter(Calendar.class, new CalendarDataWriter());
-        registerDataWriter(Date.class, new DateDataWriter());
-        registerDataWriter(Enum.class, new EnumDataWriter());
-        registerDataWriter(Number.class, new NumberDataWriter());
-        registerDataWriter(String.class, new StringDataWriter());
     }
 
     /**
@@ -296,10 +306,7 @@ public class ExcelWriter<DATA> {
             String name = field.getName();
             Class<?> type = field.getType();
 
-            // 查找该字段类型的数据处理器
-            List<ExcelDataWriter<?>> data =
-                writers.values().stream().filter(excelData -> excelData.writeable(type)).collect(Collectors.toList());
-            if (data.isEmpty()) {
+            if (decide(type) == null) {
                 LOGGER.debug("字段[{}]不能写入", name);
             } else {
                 ExcelColumn column = field.getAnnotation(ExcelColumn.class);
@@ -423,12 +430,56 @@ public class ExcelWriter<DATA> {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Writer<?> build(Object data) {
-        Optional<ExcelDataWriter<?>> dataBuilder =
-            writers.values().parallelStream().filter(excelData -> excelData.writeable(data)).limit(1).findFirst();
+        if (data == null) {
+            return NULL_WRITER;
+        }
 
-        ExcelDataWriter<?> writer =
-            dataBuilder.orElseThrow(() -> new UnsupportedOperationException("数据[" + data + "]没有对应的ExcelDataWriter"));
-        return new Writer(writer, data);
+        ExcelDataWriter excelDataWriter = decide(data.getClass());
+        if (excelDataWriter == null) {
+            throw new UnsupportedOperationException("数据[" + data + "]没有对应的ExcelDataWriter");
+        }
+
+        return new Writer(excelDataWriter, data);
+    }
+
+    /**
+     * 根据类型决策出一个数据写出函数
+     * 
+     * @param type
+     *            数据类型class
+     * @param <T>
+     *            实际类型
+     * @return 该数据的写出函数，可能为null
+     */
+    @SuppressWarnings("unchecked")
+    private <T> ExcelDataWriter<T> decide(Class<? extends T> type) {
+        ExcelDataWriter<T> writer = (ExcelDataWriter<T>)writers.get(type);
+        if (writer != null) {
+            return writer;
+        }
+
+        try {
+            writer = (ExcelDataWriter<T>)DEFAULT_WRITERS.get(type);
+            if (writer != null) {
+                return writer;
+            }
+
+            writer = (ExcelDataWriter<T>)writers.values().stream().filter(w -> w.writeable(type)).limit(1).findFirst()
+                .orElse(null);
+
+            if (writer != null) {
+                return writer;
+            }
+
+            writer = (ExcelDataWriter<T>)DEFAULT_WRITERS.values().stream().filter(w -> w.writeable(type)).limit(1)
+                .findFirst().orElse(null);
+
+            return writer;
+        } finally {
+            if (writer != null) {
+                writers.put(type, writer);
+            }
+        }
     }
 
     @AllArgsConstructor

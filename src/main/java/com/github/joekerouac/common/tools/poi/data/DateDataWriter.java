@@ -33,11 +33,6 @@ public final class DateDataWriter implements ExcelDataWriter<Date> {
     }
 
     @Override
-    public boolean writeable(Object data) {
-        return (data instanceof Date);
-    }
-
-    @Override
     public boolean writeable(Class<?> type) {
         if (type != null && type.equals(Date.class)) {
             return true;

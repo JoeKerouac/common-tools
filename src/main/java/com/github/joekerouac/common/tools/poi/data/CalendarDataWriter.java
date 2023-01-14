@@ -31,11 +31,6 @@ public final class CalendarDataWriter implements ExcelDataWriter<Calendar> {
     }
 
     @Override
-    public boolean writeable(Object data) {
-        return (data instanceof Calendar);
-    }
-
-    @Override
     public boolean writeable(Class<?> type) {
         if (type != null && type.equals(Calendar.class)) {
             return true;
