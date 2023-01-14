@@ -57,7 +57,7 @@ public class PemUtil {
     public static <T> T read(byte[] data) {
         PEMParser parser = new PEMParser(new StringReader(new String(data, StandardCharsets.UTF_8)));
         try {
-            return (T)parser.readPemObject();
+            return (T)parser.readObject();
         } catch (IOException e) {
             // 数据格式不对时抛出该异常
             throw new CryptoException("pem数据读取失败", e);
