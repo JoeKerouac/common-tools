@@ -12,7 +12,6 @@
  */
 package com.github.joekerouac.common.tools.poi;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
@@ -26,6 +25,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
+import com.github.joekerouac.common.tools.exception.ExcelClosedException;
 import com.github.joekerouac.common.tools.poi.data.*;
 import com.github.joekerouac.common.tools.reflect.ReflectUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
@@ -34,17 +34,17 @@ import lombok.AllArgsConstructor;
 import lombok.CustomLog;
 
 /**
- * Excel执行器，将数据写入excel，用户可以注册自己的excel单元格数据类型处理器{@link ExcelDataWriter ExcelDataWriter}来做
+ * Excel写出工具，将数据写入excel，用户可以注册自己的excel单元格数据类型处理器{@link ExcelDataWriter ExcelDataWriter}来做
  * 一些特殊处理，例如添加单元格样式等，系统默认会注册Date、Calendar、String、Number、Boolean、Enum类型的数据处理器。
- *
+ * 
  * @author JoeKerouac
- * @date 2022-10-17 19:09
+ * @date 2023-01-12 19:35
  * @since 2.0.0
- * @see ExcelWriter
  */
-@Deprecated
 @CustomLog
-public final class ExcelExecutor {
+public class ExcelWriter<DATA> {
+
+    private static final String DEFAULT_SHEET_NAME = "Sheet0";
 
     /**
      * 默认内存中最多多少行单元格
@@ -55,11 +55,6 @@ public final class ExcelExecutor {
      * 排序器
      */
     private static final Comparator<Field> COMPARATOR;
-
-    /**
-     * 默认实例
-     */
-    private static final ExcelExecutor UTILS = new ExcelExecutor();
 
     static {
         COMPARATOR = (f1, f2) -> {
@@ -85,38 +80,107 @@ public final class ExcelExecutor {
      */
     private final Map<Class<?>, ExcelDataWriter<?>> writers = new HashMap<>();
 
-    private ExcelExecutor() {
+    /**
+     * 是否写出标题，如果为true，则每个sheet写入第一行数据前都会先写出标题
+     */
+    private final boolean hasTitle;
+
+    /**
+     * 是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
+     */
+    private final boolean transverse;
+
+    /**
+     * work book
+     */
+    private final Workbook wb;
+
+    /**
+     * 标志位，false表示无法写出
+     */
+    private boolean flag;
+
+    /**
+     * 构建器
+     *
+     */
+    public ExcelWriter() {
+        this(true, false, IN_MEMORY);
+    }
+
+    /**
+     * 构建器
+     *
+     * @param inMemory
+     *            最多保留在内存中多少行
+     */
+    public ExcelWriter(int inMemory) {
+        this(true, false, inMemory);
+    }
+
+    /**
+     * 构建器
+     *
+     * @param hasTitle
+     *            是否写出标题，全局配置，后续还可以分别指定
+     * @param inMemory
+     *            最多保留在内存中多少行
+     */
+    public ExcelWriter(boolean hasTitle, int inMemory) {
+        this(hasTitle, false, inMemory);
+    }
+
+    /**
+     * 构建器
+     * 
+     * @param hasTitle
+     *            是否写出标题，全局配置，后续还可以分别指定
+     * @param transverse
+     *            默认数据是按行写的，是否将数据按列写出，true表示按列写出（即竖着写）
+     * @param inMemory
+     *            最多保留在内存中多少行
+     */
+    public ExcelWriter(boolean hasTitle, boolean transverse, int inMemory) {
+        this.hasTitle = hasTitle;
+        this.transverse = transverse;
+        this.wb = new SXSSFWorkbook(inMemory);
+        this.flag = true;
         init();
     }
 
-    /**
-     * 初始化，注册默认的DataWriter
-     */
     private void init() {
-        writers.put(Boolean.class, new BooleanDataWriter());
-        writers.put(Calendar.class, new CalendarDataWriter());
-        writers.put(Date.class, new DateDataWriter());
-        writers.put(Enum.class, new EnumDataWriter());
-        writers.put(Number.class, new NumberDataWriter());
-        writers.put(String.class, new StringDataWriter());
+        registerDataWriter(Boolean.class, new BooleanDataWriter());
+        registerDataWriter(Calendar.class, new CalendarDataWriter());
+        registerDataWriter(Date.class, new DateDataWriter());
+        registerDataWriter(Enum.class, new EnumDataWriter());
+        registerDataWriter(Number.class, new NumberDataWriter());
+        registerDataWriter(String.class, new StringDataWriter());
     }
 
     /**
-     * 获取POIUtils的实例
-     *
-     * @return POIUtils实例，多次获取的一样
+     * 将excel写出到指定输出流；
+     * 
+     * 注意：写出后输出流将会被关闭，同时excel也会被关闭，无法再写入数据
+     * 
+     * @param outputStream
+     *            输出流
+     * @throws IOException
+     *             IO异常
      */
-    public static ExcelExecutor getInstance() {
-        return UTILS;
-    }
+    public synchronized void write(OutputStream outputStream) throws IOException {
+        if (!flag) {
+            throw new ExcelClosedException("excel closed, can not write");
+        }
 
-    /**
-     * 构建新的POIUtils
-     *
-     * @return 新的POIUtils，每次返回的实例都不一样
-     */
-    public static ExcelExecutor buildInstance() {
-        return new ExcelExecutor();
+        flag = false;
+
+        wb.write(outputStream);
+
+        if (wb instanceof SXSSFWorkbook) {
+            ((SXSSFWorkbook)wb).dispose();
+        }
+
+        wb.close();
     }
 
     /**
@@ -152,206 +216,79 @@ public final class ExcelExecutor {
     }
 
     /**
-     * 将pojo写入本地excel
+     * 将pojo集合写入excel
      *
-     * @param datas
-     *            pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param path
-     *            excel本地路径
-     * @throws IOException
-     *             IO异常
+     * @param dataList
+     *            pojo集合，空元素将被忽略，集合中必须是都是同种对象
      */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, String path) throws IOException {
-        writeToExcel(datas, hasTitle, path, false);
-    }
-
-    /**
-     * 将pojo写入本地excel
-     *
-     * @param datas
-     *            pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param path
-     *            excel本地路径
-     * @param transverse
-     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, String path, boolean transverse)
-        throws IOException {
-        writeToExcel(datas, hasTitle, path, IN_MEMORY, transverse);
-    }
-
-    /**
-     * 将pojo写入本地excel
-     *
-     * @param datas
-     *            pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param path
-     *            excel本地路径
-     * @param inMemory
-     *            最多保留在内存中多少行
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, String path, int inMemory)
-        throws IOException {
-        writeToExcel(datas, hasTitle, path, inMemory, false);
-    }
-
-    /**
-     * 将pojo写入本地excel
-     *
-     * @param datas
-     *            pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param path
-     *            excel本地路径
-     * @param inMemory
-     *            最多保留在内存中多少行
-     * @param transverse
-     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, String path, int inMemory,
-        boolean transverse) throws IOException {
-        writeToExcel(datas, hasTitle, new FileOutputStream(path), inMemory, transverse);
-    }
-
-    /**
-     * 将数据写入excel
-     *
-     * @param datas
-     *            要写入excel的pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param outputStream
-     *            输出流（该流不会关闭，需要用户手动关闭）
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, OutputStream outputStream)
-        throws IOException {
-        writeToExcel(datas, hasTitle, outputStream, false);
-    }
-
-    /**
-     * 将数据写入excel
-     *
-     * @param datas
-     *            要写入excel的pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param outputStream
-     *            输出流（该流不会关闭，需要用户手动关闭）
-     * @param transverse
-     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, OutputStream outputStream,
-        boolean transverse) throws IOException {
-        writeToExcel(datas, hasTitle, outputStream, IN_MEMORY, transverse);
-    }
-
-    /**
-     * 将数据写入excel
-     *
-     * @param datas
-     *            要写入excel的pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param outputStream
-     *            输出流（该流不会关闭，需要用户手动关闭）
-     * @param inMemory
-     *            最多保留在内存中多少行
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, OutputStream outputStream, int inMemory)
-        throws IOException {
-        writeToExcel(datas, hasTitle, outputStream, inMemory, false);
-    }
-
-    /**
-     * 将数据写入excel
-     *
-     * @param datas
-     *            要写入excel的pojo数据
-     * @param hasTitle
-     *            是否需要标题
-     * @param outputStream
-     *            输出流（该流不会关闭，需要用户手动关闭）
-     * @param inMemory
-     *            最多保留在内存中多少行
-     * @param transverse
-     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @throws IOException
-     *             IO异常
-     */
-    public void writeToExcel(List<? extends Object> datas, boolean hasTitle, OutputStream outputStream, int inMemory,
-        boolean transverse) throws IOException {
-        LOGGER.debug("准备将数据写入excel");
-        // 这里使用SXSSFWorkbook而不是XSSFWorkbook，这样将会节省内存，但是内存中仅仅存在inMemory行数据，如果超出那么会将
-        // index最小的刷新到本地，后续不能通过getRow方法获取到该行
-        SXSSFWorkbook wb = new SXSSFWorkbook(inMemory);
-        writeToExcel(datas, hasTitle, wb, transverse);
-        LOGGER.debug("数据写入excel完毕，准备写入本地文件");
-        wb.write(outputStream);
-        LOGGER.debug("删除临时文件，关闭Workbook");
-        wb.dispose();
-        wb.close();
+    public void writeToExcel(List<DATA> dataList) {
+        writeToExcel(dataList, hasTitle, transverse, DEFAULT_SHEET_NAME);
     }
 
     /**
      * 将pojo集合写入excel
      *
-     * @param datas
-     *            pojo集合，空元素将被忽略
-     * @param hasTitle
-     *            是否需要title
-     * @param workbook
-     *            工作簿
-     * @return 写入后的工作簿
+     * @param dataList
+     *            pojo集合，空元素将被忽略，集合中必须是都是同种对象
+     * @param sheetName
+     *            数据要写入的sheet
      */
-    public Workbook writeToExcel(List<? extends Object> datas, boolean hasTitle, Workbook workbook) {
-        return writeToExcel(datas, hasTitle, workbook, false);
+    public void writeToExcel(List<DATA> dataList, String sheetName) {
+        writeToExcel(dataList, hasTitle, transverse, sheetName);
     }
 
     /**
-     * 将pojo集合写入excel（处理数据，不写入）
+     * 将pojo集合写入excel
      *
      * @param dataList
      *            pojo集合，空元素将被忽略，集合中必须是都是同种对象
      * @param hasTitle
-     *            是否需要title
-     * @param workbook
-     *            工作簿
+     *            是否写入title
+     */
+    public void writeToExcel(List<DATA> dataList, boolean hasTitle) {
+        writeToExcel(dataList, hasTitle, transverse, DEFAULT_SHEET_NAME);
+    }
+
+    /**
+     * 将pojo集合写入excel
+     *
+     * @param dataList
+     *            pojo集合，空元素将被忽略，集合中必须是都是同种对象
+     * @param hasTitle
+     *            是否写入title
      * @param transverse
      *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @return 写入后的工作簿
      */
-    public Workbook writeToExcel(List<? extends Object> dataList, boolean hasTitle, Workbook workbook,
-        boolean transverse) {
+    public void writeToExcel(List<DATA> dataList, boolean hasTitle, boolean transverse) {
+        writeToExcel(dataList, hasTitle, transverse, DEFAULT_SHEET_NAME);
+    }
+
+    /**
+     * 将pojo集合写入excel
+     *
+     * @param dataList
+     *            pojo集合，空元素将被忽略，集合中必须是都是同种对象
+     * @param hasTitle
+     *            是否写入title
+     * @param transverse
+     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
+     * @param sheetName
+     *            sheetName
+     */
+    public void writeToExcel(List<DATA> dataList, boolean hasTitle, boolean transverse, String sheetName) {
         if (CollectionUtil.isEmpty(dataList)) {
             LOGGER.warn("给定数据集合为空");
-            return workbook;
+            return;
         }
-        List<? extends Object> datas = dataList.parallelStream().filter(Objects::nonNull).collect(Collectors.toList());
-        if (datas.isEmpty()) {
+
+        List<DATA> newDataList = dataList.parallelStream().filter(Objects::nonNull).collect(Collectors.toList());
+        if (newDataList.isEmpty()) {
             LOGGER.warn("给定数据集合里的数据全是空");
-            return workbook;
+            return;
         }
+
         // 获取所有字段（包括父类的）
-        Field[] fields = ReflectUtil.getAllFields(datas.get(0).getClass());
+        Field[] fields = ReflectUtil.getAllFields(newDataList.get(0).getClass());
 
         // 过滤可以写入的字段
         List<Field> writeFields = new ArrayList<>();
@@ -390,8 +327,8 @@ public final class ExcelExecutor {
             }
         }
 
-        List<List<Writer<?>>> writeDatas = new ArrayList<>(datas.size());
-        for (Object dataValue : datas) {
+        List<List<Writer<?>>> writeDatas = new ArrayList<>(newDataList.size());
+        for (Object dataValue : newDataList) {
             // 构建一行数据
             List<Writer<?>> columnDatas = new ArrayList<>(writeFields.size());
             // 加入
@@ -408,8 +345,7 @@ public final class ExcelExecutor {
         }
 
         LOGGER.debug("要写入的数据为：[{}]", writeDatas);
-        writeToExcel(titles, writeDatas, hasTitle, workbook, transverse);
-        return workbook;
+        writeToExcel(titles, writeDatas, hasTitle, transverse, sheetName);
     }
 
     /**
@@ -421,40 +357,49 @@ public final class ExcelExecutor {
      *            数据列表
      * @param hasTitle
      *            是否需要标题
-     * @param workbook
-     *            工作簿
      * @param transverse
      *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
-     * @return 写入数据后的工作簿
+     * @param sheetName
+     *            sheet名，如果存在则追加写入，否则创建
      */
     @SuppressWarnings("rawtypes")
-    private Workbook writeToExcel(List<Writer<?>> titles, List<List<Writer<?>>> dataList, boolean hasTitle,
-        Workbook workbook, boolean transverse) {
+    private synchronized void writeToExcel(List<Writer<?>> titles, List<List<Writer<?>>> dataList, boolean hasTitle,
+        boolean transverse, String sheetName) {
+        if (!flag) {
+            throw new ExcelClosedException("excel closed, can not write");
+        }
+
         if (CollectionUtil.isEmpty(dataList)) {
             LOGGER.warn("数据为空，不写入直接返回");
-            return workbook;
+            return;
         }
 
         LOGGER.debug("写入excel，{}标题", hasTitle ? "需要" : "不需要");
-        Sheet sheet = workbook.createSheet();
-        int rowNum = 0;
 
-        List<List<Writer<?>>> datas = dataList;
-        if (hasTitle && !CollectionUtil.isEmpty(titles)) {
-            LOGGER.debug("需要标题，标题为：{}", titles);
-            List<List<Writer<?>>> lists = new ArrayList<>(datas.size() + 1);
-            lists.add(titles);
-            lists.addAll(datas);
-            datas = lists;
+        Sheet sheet = wb.getSheet(sheetName);
+
+        List<List<Writer<?>>> realWriteData = dataList;
+
+        if (sheet == null) {
+            sheet = wb.createSheet(sheetName);
+            if (hasTitle && !CollectionUtil.isEmpty(titles)) {
+                LOGGER.debug("需要标题，标题为：{}", titles);
+                List<List<Writer<?>>> lists = new ArrayList<>(realWriteData.size() + 1);
+                lists.add(titles);
+                lists.addAll(realWriteData);
+                realWriteData = lists;
+            }
         }
+
+        int rowNum = sheet.getPhysicalNumberOfRows();
 
         if (transverse) {
-            datas = CollectionUtil.matrixTransform(datas);
+            realWriteData = CollectionUtil.matrixTransform(realWriteData);
         }
 
-        for (int i = rowNum; i < (rowNum + datas.size()); i++) {
+        for (int i = rowNum; i < (rowNum + realWriteData.size()); i++) {
             Row row = sheet.createRow(i);
-            List<? extends Writer> columnDatas = datas.get(i - rowNum);
+            List<? extends Writer> columnDatas = realWriteData.get(i - rowNum);
             if (CollectionUtil.isEmpty(columnDatas)) {
                 continue;
             }
@@ -467,7 +412,6 @@ public final class ExcelExecutor {
                 data.write(row.createCell(j));
             }
         }
-        return workbook;
     }
 
     /**
@@ -498,4 +442,5 @@ public final class ExcelExecutor {
             writer.write(cell, data);
         }
     }
+
 }
