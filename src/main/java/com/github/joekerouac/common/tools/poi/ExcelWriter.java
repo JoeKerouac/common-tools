@@ -62,11 +62,6 @@ public class ExcelWriter<DATA> {
      */
     private static final Map<Class<?>, ExcelDataWriter<?>> DEFAULT_WRITERS;
 
-    /**
-     * null数据写出函数
-     */
-    private static final Writer<?> NULL_WRITER = new Writer<>(new StringDataWriter(), "");
-
     static {
         Map<Class<?>, ExcelDataWriter<?>> writers = new HashMap<>();
         writers.put(Boolean.class, new BooleanDataWriter());
@@ -376,7 +371,7 @@ public class ExcelWriter<DATA> {
             throw new ExcelClosedException("excel closed, can not write");
         }
 
-        if (CollectionUtil.isEmpty(dataList)) {
+        if (CollectionUtil.isEmpty(dataList) && !hasTitle) {
             LOGGER.warn("数据为空，不写入直接返回");
             return;
         }
@@ -431,7 +426,7 @@ public class ExcelWriter<DATA> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Writer<?> build(Object data) {
         if (data == null) {
-            return NULL_WRITER;
+            return null;
         }
 
         ExcelDataWriter excelDataWriter = decide(data.getClass());
