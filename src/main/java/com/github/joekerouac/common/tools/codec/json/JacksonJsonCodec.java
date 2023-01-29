@@ -110,7 +110,7 @@ public class JacksonJsonCodec implements Codec {
         } catch (Throwable e) {
             String msg = String.format("解析数据[%s]失败,类型：[%s]", new String(data, Const.DEFAULT_CHARSET),
                 typeReference.getType().getTypeName());
-            throw new SerializeException(ErrorCodeEnum.NULL_POINT, msg, e);
+            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, msg, e);
         }
     }
 
@@ -125,7 +125,7 @@ public class JacksonJsonCodec implements Codec {
             byte[] result = mapper.writeValueAsBytes(data);
             return StringUtils.convert(result, JSON_DEFAULT_CHARSET, charset == null ? JSON_DEFAULT_CHARSET : charset);
         } catch (Throwable e) {
-            throw new SerializeException(ErrorCodeEnum.NULL_POINT, e);
+            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, e);
         }
     }
 
