@@ -103,4 +103,9 @@ public class StringConst {
      */
     public static final char UNDERLINE = '_';
 
+    /**
+     * 反引号
+     */
+    public static final char BACKTICK = '`';
+
 }
