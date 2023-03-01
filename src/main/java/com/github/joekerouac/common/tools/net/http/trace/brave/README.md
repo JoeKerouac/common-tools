@@ -1,0 +1,1 @@
+注意，这个只能追踪请求，但是对于我们自己注册的回调处理，在回调中是获取不到trace信息的，详情参考 org.apache.hc.core5.http.nio.AsyncClientExchangeHandler#streamEnd（具体实现在org.apache.hc.client5.http.impl.async.HttpAsyncMainClientExec#execute这个方法里边，匿名内部类），在该方法中，先处理了entityConsumer

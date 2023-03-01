@@ -63,6 +63,7 @@
         <cglib.version>3.2.5</cglib.version>
         <ognl.version>3.2.14</ognl.version>
         <poi.version>3.17</poi.version>
+        <brave.version>5.9.2</brave.version>
     </properties>
 
     <dependencies>
@@ -174,6 +175,15 @@
             <version>${poi.version}</version>
             <optional>true</optional>
         </dependency>
+
+        <!-- trace -->
+        <dependency>
+            <groupId>io.zipkin.brave</groupId>
+            <artifactId>brave-instrumentation-http</artifactId>
+            <version>${brave.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
 
 
         <dependency>
