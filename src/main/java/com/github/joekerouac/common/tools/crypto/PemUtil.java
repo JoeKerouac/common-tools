@@ -15,9 +15,14 @@ package com.github.joekerouac.common.tools.crypto;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.PKCS8Generator;
+import org.bouncycastle.util.io.pem.PemWriter;
 
 import com.github.joekerouac.common.tools.crypto.exception.CryptoException;
 import com.github.joekerouac.common.tools.io.IOUtils;
@@ -62,6 +67,30 @@ public class PemUtil {
             // 数据格式不对时抛出该异常
             throw new CryptoException("pem数据读取失败", e);
         }
+    }
+
+    /**
+     * 将密钥写出为pem文件
+     * 
+     * @param key
+     *            密钥
+     * @return pem文件，例如：以-----BEGIN PRIVATE KEY-----开头
+     */
+    public static String write(Key key) {
+        StringWriter stringWriter = new StringWriter();
+        PemWriter pemWriter = new PemWriter(stringWriter);
+        PrivateKeyInfo instance = PrivateKeyInfo.getInstance(key.getEncoded());
+        PKCS8Generator generator = new PKCS8Generator(instance, null);
+
+        try {
+            pemWriter.writeObject(generator);
+            pemWriter.flush();
+            pemWriter.close();
+        } catch (IOException e) {
+            // 不可能走到这里
+            throw new RuntimeException(e);
+        }
+        return stringWriter.toString();
     }
 
 }

@@ -10,3 +10,6 @@
 - 修改bcprov的版本（`org.bouncycastle:bcprov-jdk16:1.46` -> `org.bouncycastle:bcprov-jdk15on:1.64`），同时修改因此导致的部分不兼容API；
 - 修改IHttpClient，支持外部传入自定义构建的`org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder`，以此支持`brave`（tracing，spring-cloud-sleuth默认使用brave实现trace，而brave要求代码侵入）；
 - 修改excel相关api，支持分批写入，而不是一次性全部写入；
+
+##v2.0.3
+- PemUtil增加将rsa密钥以pem格式写出到文件；
