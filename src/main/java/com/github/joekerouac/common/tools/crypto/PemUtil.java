@@ -18,14 +18,16 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.PKCS8Generator;
+import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 
 import com.github.joekerouac.common.tools.crypto.exception.CryptoException;
 import com.github.joekerouac.common.tools.io.IOUtils;
+import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
  * PEM格式文件工具
@@ -77,13 +79,19 @@ public class PemUtil {
      * @return pem文件，例如：以-----BEGIN PRIVATE KEY-----开头
      */
     public static String write(Key key) {
+        String type;
+        if (key instanceof PublicKey) {
+            type = "PUBLIC KEY";
+        } else if (key instanceof PrivateKey) {
+            type = "PRIVATE KEY";
+        } else {
+            throw new UnsupportedOperationException(StringUtils.format("不支持的密钥类型： [{}]", key.getClass()));
+        }
+
         StringWriter stringWriter = new StringWriter();
         PemWriter pemWriter = new PemWriter(stringWriter);
-        PrivateKeyInfo instance = PrivateKeyInfo.getInstance(key.getEncoded());
-        PKCS8Generator generator = new PKCS8Generator(instance, null);
-
         try {
-            pemWriter.writeObject(generator);
+            pemWriter.writeObject(new PemObject(type, key.getEncoded()));
             pemWriter.flush();
             pemWriter.close();
         } catch (IOException e) {
