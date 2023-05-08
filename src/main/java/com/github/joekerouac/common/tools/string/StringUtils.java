@@ -225,4 +225,51 @@ public class StringUtils {
         return trim(data, Character.toString(trim));
     }
 
+    /**
+     * 求两个字符串的最大公共子序列的长度
+     *
+     * @param arg0
+     *            字符串1
+     * @param arg1
+     *            字符串2
+     * @return 两个字符串的最大公共子序列的长度，例：
+     *         <ul>
+     *         <li>123456和456789的lcs为3</li>
+     *         <li>123456和256789的lcs为3</li>
+     *         <li>123456和556489的lcs为2</li>
+     *         </ul>
+     */
+
+    public static long lcs(String arg0, String arg1) {
+        if (arg0 == null || arg1 == null) {
+            return 0;
+        }
+        return lcs(arg0, arg1, 0, 0);
+    }
+
+    /**
+     * 求两个字符串的最大公共子序列的长度
+     *
+     * @param arg0
+     *            字符串1
+     * @param arg1
+     *            字符串2
+     * @param i
+     *            字符串1的当前位置指针
+     * @param j
+     *            字符串2的当前位置指针
+     * @return 两个字符串的最大公共子序列的长度
+     */
+    private static long lcs(String arg0, String arg1, int i, int j) {
+        if (arg0.length() == i || arg1.length() == j) {
+            return 0;
+        }
+
+        if (arg0.charAt(i) == arg1.charAt(j)) {
+            return 1 + lcs(arg0, arg1, ++i, ++j);
+        } else {
+            return Math.max(lcs(arg0, arg1, ++i, j), lcs(arg0, arg1, i, ++j));
+        }
+    }
+
 }
