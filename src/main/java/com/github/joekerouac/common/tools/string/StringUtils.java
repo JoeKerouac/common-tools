@@ -266,9 +266,9 @@ public class StringUtils {
         }
 
         if (arg0.charAt(i) == arg1.charAt(j)) {
-            return 1 + lcs(arg0, arg1, ++i, ++j);
+            return 1 + lcs(arg0, arg1, i + 1, j + 1);
         } else {
-            return Math.max(lcs(arg0, arg1, ++i, j), lcs(arg0, arg1, i, ++j));
+            return Math.max(lcs(arg0, arg1, i + 1, j), lcs(arg0, arg1, i, j + 1));
         }
     }
 
