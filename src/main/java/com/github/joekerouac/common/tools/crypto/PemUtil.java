@@ -17,10 +17,20 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
@@ -37,6 +47,74 @@ import com.github.joekerouac.common.tools.string.StringUtils;
  * @since 1.0.0
  */
 public class PemUtil {
+
+    /**
+     * 从pem中读取key数据
+     *
+     * @param keyData
+     *            pem数据
+     * @param keyAlgorithm
+     *            key算法
+     * @param <T>
+     *            key类型
+     * @return pem中读取到的数据
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T read(byte[] keyData, String keyAlgorithm)
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException {
+        Object read = read(keyData);
+        // 如果不是pem编码的则返回null，此时可能是X.509编码的公钥，也可能是PKCS#8编码的私钥
+        if (read == null) {
+            KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
+
+            try {
+                read = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyData));
+            } catch (Throwable throwable) {
+                read = keyFactory.generatePublic(new X509EncodedKeySpec(keyData));
+            }
+        }
+
+        if (read instanceof PEMKeyPair || read instanceof SubjectPublicKeyInfo || read instanceof PrivateKeyInfo) {
+            PublicKey publicKey = null;
+            PrivateKey privateKey = null;
+
+            KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
+            try {
+                if (read instanceof PEMKeyPair) {
+                    PKCS8EncodedKeySpec pkcs8EncodedKeySpec =
+                        new PKCS8EncodedKeySpec(((PEMKeyPair)read).getPrivateKeyInfo().getEncoded());
+                    X509EncodedKeySpec x509EncodedKeySpec =
+                        new X509EncodedKeySpec(((PEMKeyPair)read).getPublicKeyInfo().getEncoded());
+
+                    publicKey = keyFactory.generatePublic(x509EncodedKeySpec);
+                    privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+                } else if (read instanceof SubjectPublicKeyInfo) {
+                    X509EncodedKeySpec x509EncodedKeySpec =
+                        new X509EncodedKeySpec(((SubjectPublicKeyInfo)read).getEncoded());
+                    publicKey = keyFactory.generatePublic(x509EncodedKeySpec);
+                } else {
+                    PKCS8EncodedKeySpec pkcs8EncodedKeySpec =
+                        new PKCS8EncodedKeySpec(((PrivateKeyInfo)read).getEncoded());
+                    privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("密钥解析失败", e);
+            }
+
+            if (publicKey != null && privateKey != null) {
+                read = new KeyPair(publicKey, privateKey);
+            } else {
+                read = publicKey == null ? privateKey : publicKey;
+            }
+        }
+        return (T)read;
+    }
 
     /**
      * 将pem编码的密钥转换为对应的密钥对象，pem编码的文件以-----BEGIN xxxx-----开头
