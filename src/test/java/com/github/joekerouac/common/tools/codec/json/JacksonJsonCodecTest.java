@@ -12,16 +12,23 @@
  */
 package com.github.joekerouac.common.tools.codec.json;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Map;
+
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.reflect.type.AbstractTypeReference;
 import com.github.joekerouac.common.tools.resource.Resource;
 import com.github.joekerouac.common.tools.resource.impl.ClassPathResource;
 import com.github.joekerouac.common.tools.resource.impl.FileResource;
 import com.github.joekerouac.common.tools.resource.impl.URLResource;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -41,12 +48,61 @@ public class JacksonJsonCodecTest {
         Assert.assertEquals(holder, objRead);
     }
 
+    @Test(dataProvider = "testLocalDateTimeProvider")
+    public void testLocalDateTime(DateObj dateObj, String expect) {
+        JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
+        byte[] write = jacksonJsonSerialization.write(dateObj, StandardCharsets.UTF_8);
+        Map<String, String> map = jacksonJsonSerialization.read(write, StandardCharsets.UTF_8,
+            new AbstractTypeReference<Map<String, String>>() {});
+        String date = map.get("date");
+        Assert.assertEquals(date, expect);
+    }
+
     @DataProvider(name = "testResourceDataProvider")
     public Object[][] testResourceDataProvider() {
         JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
 
         return new Object[][] {{jacksonJsonSerialization, new ResourceHolder(new URLResource("test.jar", "test.jar"),
             new FileResource("/root/test/test.jar"), new ClassPathResource("sql-error-codes.xml"))}};
+    }
+
+    @DataProvider(name = "testLocalDateTimeProvider")
+    public Object[][] testLocalDateTimeProvider() {
+        LocalDateTime now = LocalDateTime.now();
+        return new Object[][] {{new DateObj1(now), DateUtil.getFormatDate(now, DateUtil.BASE)},
+            {new DateObj2(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH:mm")},
+            {new DateObj3(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH")}};
+    }
+
+    public interface DateObj {
+
+        LocalDateTime getDate();
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DateObj1 implements DateObj {
+
+        private LocalDateTime date;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DateObj2 implements DateObj {
+
+        @LocalDateTimeFormat("yyyy-MM-dd HH:mm")
+        private LocalDateTime date;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DateObj3 implements DateObj {
+
+        @LocalDateTimeFormat(serializer = "yyyy-MM-dd HH")
+        private LocalDateTime date;
     }
 
     @Data
