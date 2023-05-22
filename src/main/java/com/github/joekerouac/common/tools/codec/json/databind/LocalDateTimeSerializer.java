@@ -16,10 +16,15 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.ContextualSerializer;
+import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
+import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
  * 用于处理LocalDateTime
@@ -28,16 +33,39 @@ import com.github.joekerouac.common.tools.date.DateUtil;
  * @date 2022-10-14 14:37:00
  * @since 1.0.0
  */
-public class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime> implements SerializeRegister {
+public class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime>
+    implements SerializeRegister, ContextualSerializer {
+
+    private final String format;
+
+    public LocalDateTimeSerializer() {
+        this(DateUtil.BASE);
+    }
+
+    public LocalDateTimeSerializer(String format) {
+        this.format = format;
+    }
 
     @Override
     public void serialize(final LocalDateTime value, final JsonGenerator gen, final SerializerProvider serializers)
         throws IOException {
-        gen.writeString(DateUtil.getFormatDate(value, DateUtil.BASE));
+        gen.writeString(DateUtil.getFormatDate(value, format));
     }
 
     @Override
     public void register(final SimpleModule module) {
         module.addSerializer(LocalDateTime.class, this);
+    }
+
+    @Override
+    public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
+        throws JsonMappingException {
+        LocalDateTimeFormat annotation = beanProperty.getAnnotation(LocalDateTimeFormat.class);
+        if (annotation == null) {
+            return new LocalDateTimeSerializer(format);
+        }
+
+        return new LocalDateTimeSerializer(
+            StringUtils.getOrDefault(annotation.serializer(), StringUtils.getOrDefault(annotation.value(), format)));
     }
 }

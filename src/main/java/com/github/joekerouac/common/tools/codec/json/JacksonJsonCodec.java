@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
+import com.github.joekerouac.common.tools.codec.json.databind.LocalDateTimeDeserializer;
 import com.github.joekerouac.common.tools.codec.json.databind.LocalDateTimeSerializer;
 import com.github.joekerouac.common.tools.codec.json.databind.ResourceDeserializer;
 import com.github.joekerouac.common.tools.codec.json.databind.ResourceSerializer;
@@ -57,6 +58,7 @@ public class JacksonJsonCodec implements Codec {
         serializeRegisters.add(new ResourceDeserializer<>());
         serializeRegisters.add(new ResourceSerializer());
         serializeRegisters.add(new LocalDateTimeSerializer());
+        serializeRegisters.add(new LocalDateTimeDeserializer());
         DEFAULT_SERIALIZE_REGISTERS = Collections.unmodifiableList(serializeRegisters);
     }
 
