@@ -62,7 +62,7 @@ public class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime>
         throws JsonMappingException {
         LocalDateTimeFormat annotation = beanProperty.getAnnotation(LocalDateTimeFormat.class);
         if (annotation == null) {
-            return new LocalDateTimeSerializer(format);
+            return this;
         }
 
         return new LocalDateTimeSerializer(

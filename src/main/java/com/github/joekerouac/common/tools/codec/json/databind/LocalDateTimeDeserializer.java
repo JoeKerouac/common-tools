@@ -67,7 +67,7 @@ public class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime>
         BeanProperty beanProperty) throws JsonMappingException {
         LocalDateTimeFormat annotation = beanProperty.getAnnotation(LocalDateTimeFormat.class);
         if (annotation == null) {
-            return new LocalDateTimeDeserializer(format);
+            return this;
         }
 
         return new LocalDateTimeDeserializer(
