@@ -14,6 +14,7 @@ package com.github.joekerouac.common.tools.codec.json.databind;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -65,7 +66,8 @@ public class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime>
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
         BeanProperty beanProperty) throws JsonMappingException {
-        LocalDateTimeFormat annotation = beanProperty.getAnnotation(LocalDateTimeFormat.class);
+        LocalDateTimeFormat annotation =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(LocalDateTimeFormat.class)).orElse(null);
         if (annotation == null) {
             return this;
         }
