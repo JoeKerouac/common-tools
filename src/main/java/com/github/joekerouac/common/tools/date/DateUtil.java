@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.date;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -26,8 +27,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
 
@@ -62,6 +63,18 @@ public class DateUtil {
      * 常用格式化HH:mm:ss
      */
     public final static String TIME = "HH:mm:ss";
+
+    /**
+     * 将时间戳转换为LocalDateTime（使用系统默认时区）
+     * 
+     * @param epochMilli
+     *            时间戳
+     * @return LocalDateTime
+     */
+    public static LocalDateTime fromEpochMilli(long epochMilli) {
+        Instant instant = Instant.ofEpochMilli(epochMilli);
+        return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+    }
 
     /**
      * 将LocalDateTime转换为Date
