@@ -31,6 +31,8 @@ public enum CipherDesc {
 
     AES_256_PKCS7Padding("AES/CBC/PKCS7Padding", CipherType.BLOCK, 32, 16, 0, false, 0),
 
+    AES_256_PKCS5Padding("AES/CBC/PKCS5Padding", CipherType.BLOCK, 32, 16, 0, false, 0),
+
     AES_128_GCM("AES/GCM/NoPadding", CipherType.AEAD, 16, 12, 4, true, 16),
 
     AES_256_GCM("AES/GCM/NoPadding", CipherType.AEAD, 32, 12, 4, true, 16),
