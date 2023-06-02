@@ -15,7 +15,7 @@ package com.github.joekerouac.common.tools.codec.xml;
 import java.lang.annotation.*;
 import java.util.Collection;
 
-import com.github.joekerouac.common.tools.codec.xml.converter.NullConverter;
+import com.github.joekerouac.common.tools.codec.xml.deserializer.NullDeserializer;
 
 /**
  * @since 1.0.0
@@ -26,6 +26,7 @@ import com.github.joekerouac.common.tools.codec.xml.converter.NullConverter;
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.TYPE})
 @Documented
 public @interface XmlNode {
+
     /**
      * 标记该字段是否用CDATA包裹
      *
@@ -69,7 +70,7 @@ public @interface XmlNode {
      *
      * @return 类型转换器
      */
-    Class<? extends XmlTypeConvert<?>> converter() default NullConverter.class;
+    Class<? extends XmlDeserializer<?>> deserializer() default NullDeserializer.class;
 
     /**
      * 当字段为带泛型的集合时，如果不指定converter，那么需要指定该字段，表示集合中的泛型类型

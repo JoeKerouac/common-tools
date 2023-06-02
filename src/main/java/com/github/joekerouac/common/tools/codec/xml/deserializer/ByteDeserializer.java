@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.joekerouac.common.tools.codec.xml.converter;
+package com.github.joekerouac.common.tools.codec.xml.deserializer;
 
 import org.dom4j.Element;
 
@@ -23,7 +23,10 @@ import com.github.joekerouac.common.tools.string.StringUtils;
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-public class ByteConverter extends AbstractXmlTypeConvert<Byte> {
+public class ByteDeserializer extends AbstractXmlDeserializer<Byte> {
+
+    public static final ByteDeserializer INSTANCE = new ByteDeserializer();
+
     @Override
     public Byte read(Element element, String attrName) {
         String data = StringUtils.isBlank(attrName) ? element.getText() : element.attributeValue(attrName);

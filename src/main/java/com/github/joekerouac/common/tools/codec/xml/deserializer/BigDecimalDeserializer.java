@@ -10,27 +10,32 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.joekerouac.common.tools.codec.xml.converter;
+package com.github.joekerouac.common.tools.codec.xml.deserializer;
+
+import java.math.BigDecimal;
 
 import org.dom4j.Element;
 
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
- * Double转换器
+ * BigDecimal反序列化器
  *
  * @since 1.0.0
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-public class DoubleConverter extends AbstractXmlTypeConvert<Double> {
+public class BigDecimalDeserializer extends AbstractXmlDeserializer<BigDecimal> {
+
+    public static final BigDecimalDeserializer INSTANCE = new BigDecimalDeserializer();
+
     @Override
-    public Double read(Element element, String attrName) {
-        String data = StringUtils.isBlank(attrName) ? element.getText() : element.attributeValue(attrName);
-        if (StringUtils.isBlank(data)) {
-            return 0.0;
-        } else {
-            return Double.valueOf(data);
+    public BigDecimal read(Element element, String attrName) {
+        String read = StringDeserializer.INSTANCE.read(element, attrName);
+        if (StringUtils.isBlank(read)) {
+            return null;
         }
+
+        return new BigDecimal(read);
     }
 }

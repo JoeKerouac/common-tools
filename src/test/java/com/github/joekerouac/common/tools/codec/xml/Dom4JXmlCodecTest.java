@@ -12,14 +12,30 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 /**
  * @author JoeKerouac
@@ -136,6 +152,18 @@ public class Dom4JXmlCodecTest {
     }
 
     @Test
+    public void testDate() {
+        String data = "<root>\n" + "    <localDateTime>2023-06-02 17:00:00</localDateTime>\n"
+            + "    <localDateTime1>20230602170000</localDateTime1>\n" + "    <localDate>20230602</localDate>\n"
+            + "    <localDate1>2023-06-02</localDate1>\n" + "    <localTime>170000</localTime>\n"
+            + "    <localTime1>17:00:00</localTime1>\n" + "</root>";
+        DateObj read = PARSER.read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, DateObj.class);
+        Assert.assertEquals(read.getLocalDateTime(), read.getLocalDateTime1());
+        Assert.assertEquals(read.getLocalDate(), read.getLocalDate1());
+        Assert.assertEquals(read.getLocalTime(), read.getLocalTime1());
+    }
+
+    @Test
     public void testException() {
         Assert.assertNull(PARSER.parseToMap("xml", Map.class));
     }
@@ -187,6 +215,25 @@ public class Dom4JXmlCodecTest {
 
         @XmlNode(general = User.class)
         private Set<User> userSet;
+    }
+
+    @Data
+    static class DateObj {
+
+        private LocalDateTime localDateTime;
+
+        @LocalDateTimeFormat("yyyyMMddHHmmss")
+        private LocalDateTime localDateTime1;
+
+        private LocalDate localDate;
+
+        @LocalDateTimeFormat("yyyy-MM-dd")
+        private LocalDate localDate1;
+
+        private LocalTime localTime;
+
+        @LocalDateTimeFormat("HH:mm:ss")
+        private LocalTime localTime1;
     }
 
 }

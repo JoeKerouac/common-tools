@@ -14,6 +14,7 @@ package com.github.joekerouac.common.tools.reflect.bean;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 
 /**
  * 属性编辑器
@@ -79,6 +80,13 @@ public interface PropertyEditor {
      * @return 字段类型
      */
     Class<?> type();
+
+    /**
+     * 字段类型
+     * 
+     * @return 类型
+     */
+    Type getGenericType();
 
     /**
      * 字段所属class

@@ -10,44 +10,30 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.joekerouac.common.tools.codec.xml;
+package com.github.joekerouac.common.tools.codec.xml.deserializer;
 
 import org.dom4j.Element;
 
+import com.github.joekerouac.common.tools.string.StringUtils;
+
 /**
- * xml类型转换，将String类型转换为对应的类型
+ * char转换器
  *
- * @param <T>
- *            要转换的类型
  * @since 1.0.0
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-public interface XmlTypeConvert<T> {
-    /**
-     * 数据转换，将xml中的字符串数据转换为用户需要的指定类型数据
-     *
-     * @param element
-     *            节点
-     * @param attrName
-     *            要获取的属性名，如果该值不为空则认为数据需要从属性中取而不是从节点数据中取
-     * @return 转换后的数据
-     */
-    T read(Element element, String attrName);
+public class CharDeserializer extends AbstractXmlDeserializer<Character> {
 
-    // /**
-    // * 数据转换，将字段的值转换为xml中的内容
-    // *
-    // * @param obj
-    // *
-    // * @return
-    // */
-    // String write(Object obj);
+    public static final CharDeserializer INSTANCE = new CharDeserializer();
 
-    /**
-     * 确定转换后的类型
-     *
-     * @return 转换后的类型
-     */
-    Class<T> resolve();
+    @Override
+    public Character read(Element element, String attrName) {
+        String data = StringUtils.isBlank(attrName) ? element.getText() : element.attributeValue(attrName);
+        if (StringUtils.isBlank(data)) {
+            return null;
+        } else {
+            return data.toCharArray()[0];
+        }
+    }
 }

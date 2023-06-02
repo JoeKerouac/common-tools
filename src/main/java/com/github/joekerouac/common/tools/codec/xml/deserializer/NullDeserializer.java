@@ -10,27 +10,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.joekerouac.common.tools.codec.xml.converter;
+package com.github.joekerouac.common.tools.codec.xml.deserializer;
 
 import org.dom4j.Element;
 
-import com.github.joekerouac.common.tools.string.StringUtils;
+import com.github.joekerouac.common.tools.exception.CommonException;
+import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 
 /**
- * short转换器
- *
+ * 空转换器
+ * 
  * @since 1.0.0
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-public class ShortConverter extends AbstractXmlTypeConvert<Short> {
+public class NullDeserializer extends AbstractXmlDeserializer<Void> {
+
     @Override
-    public Short read(Element element, String attrName) {
-        String data = StringUtils.isBlank(attrName) ? element.getText() : element.attributeValue(attrName);
-        if (StringUtils.isBlank(data)) {
-            return 0;
-        } else {
-            return Short.valueOf(data);
-        }
+    public Void read(Element element, String attrName) {
+        throw new CommonException(ErrorCodeEnum.CODE_ERROR, "NullConverter不能使用");
     }
 }

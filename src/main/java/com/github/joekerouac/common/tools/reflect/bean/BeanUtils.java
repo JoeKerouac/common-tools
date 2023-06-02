@@ -18,12 +18,21 @@ import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.github.joekerouac.common.tools.constant.StringConst;
 import com.github.joekerouac.common.tools.date.DateUtil;
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.reflect.AccessorUtil;
 import com.github.joekerouac.common.tools.reflect.ReflectUtil;
 import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
@@ -625,6 +634,11 @@ public class BeanUtils {
         @Override
         public Class<?> type() {
             return field.getType();
+        }
+
+        @Override
+        public Type getGenericType() {
+            return field.getGenericType();
         }
 
         @Override

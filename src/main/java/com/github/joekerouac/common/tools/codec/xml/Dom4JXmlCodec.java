@@ -16,10 +16,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.dom4j.*;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
@@ -28,7 +36,8 @@ import org.xml.sax.SAXException;
 
 import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
-import com.github.joekerouac.common.tools.codec.xml.converter.XmlTypeConverterUtil;
+import com.github.joekerouac.common.tools.codec.xml.deserializer.BeanDeserializer;
+import com.github.joekerouac.common.tools.codec.xml.deserializer.Deserializers;
 import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
@@ -48,6 +57,8 @@ import lombok.Data;
 /**
  * dom4j实现的xml解析器
  *
+ * 注意：非线程安全，同时可能会有内存问题；
+ *
  * @since 1.0.0
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
@@ -59,9 +70,18 @@ public class Dom4JXmlCodec implements Codec {
 
     protected final SAXReader reader;
 
+    private final Map<Class<?>, XmlDeserializer<?>> deserializers;
+
     public Dom4JXmlCodec() {
         this.reader = new SAXReader();
+        this.deserializers = new ConcurrentHashMap<>();
+        deserializers.putAll(Deserializers.defaultDeserializers);
         enableDTD(false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> XmlDeserializer<T> addDeserializer(Class<T> type, XmlDeserializer<T> deserializer) {
+        return (XmlDeserializer<T>)deserializers.put(type, deserializer);
     }
 
     /**
@@ -216,7 +236,7 @@ public class Dom4JXmlCodec implements Codec {
     /**
      * 将XML解析为POJO对象，暂时无法解析map，当需要解析的字段是{@link java.util.Collection}的子类时必须带有注 解{@link XmlNode}，否则将解析失败。
      * <p>
-     * PS：对象中的集合字段必须添加注解，必须是简单集合，即集合中只有一种数据类型，并且当类型不是String时需要指定 converter，否则将会解析失败。
+     * PS：对象中的集合字段必须添加注解，必须是简单集合，即集合中只有一种数据类型，并且当类型不是String时需要指定Deserializer，否则将会解析失败。
      *
      * @param xml
      *            XML源
@@ -242,17 +262,7 @@ public class Dom4JXmlCodec implements Codec {
             throw new CommonException(ErrorCodeEnum.CODE_ERROR, StringUtils.format("不支持的类型:[{}]", clazz));
         }
 
-        T pojo;
         Document document;
-
-        // 获取pojo对象的实例
-        try {
-            // 没有权限访问该类或者该类（为接口、抽象类）不能实例化时将抛出异常
-            pojo = ClassUtils.getInstance(clazz);
-        } catch (Exception e) {
-            LOGGER.error(e, "class对象生成失败，请检查代码；失败原因：");
-            throw new RuntimeException(e);
-        }
 
         // 解析XML
         try {
@@ -262,114 +272,20 @@ public class Dom4JXmlCodec implements Codec {
             return null;
         }
 
-        // 获取pojo对象的说明
-        PropertyEditor[] propertyEditors = BeanUtils.getPropertyDescriptors(clazz);
         Element root = document.getRootElement();
 
-        boolean hasMapAttr = false;
-        PropertyEditor mapEditor = null;
-        Map<String, String> attrMap = null;
-
-        for (PropertyEditor editor : propertyEditors) {
-            XmlNode xmlNode = editor.getAnnotation(XmlNode.class);
-            final String fieldName = editor.name();
-            // 节点名
-            String nodeName = null;
-            // 属性名
-            String attributeName = null;
-            boolean isParent = false;
-            boolean ignore = false;
-            boolean isAttr = false;
-            if (xmlNode == null) {
-                nodeName = fieldName;
-            } else if (!xmlNode.ignore()) {
-                // 如果节点不是被忽略的节点那么继续
-                // 获取节点名称，优先使用注解，如果注解没有设置名称那么使用字段名
-                nodeName = StringUtils.isBlank(xmlNode.name()) ? fieldName : xmlNode.name();
-                LOGGER.debug("字段[{}]对应的节点名为：{}", fieldName, nodeName);
-
-                // 判断节点是否是属性值
-                if (xmlNode.isAttribute()) {
-                    isAttr = true;
-                    // 如果节点是属性值，那么需要同时设置节点名和属性名，原则上如果是属性的话必须设置节点名，但是为了防止
-                    // 用户忘记设置，在用户没有设置的时候使用字段名
-                    if (StringUtils.isBlank(xmlNode.attributeName())) {
-                        LOGGER.debug("字段[{}]是属性值，但是未设置属性名（attributeName字段），将采用字段名作为属性名", editor.name());
-                        attributeName = fieldName;
-                    } else {
-                        attributeName = xmlNode.attributeName();
-                    }
-
-                    if (StringUtils.isBlank(xmlNode.name())) {
-                        LOGGER.debug("该字段是属性值，并且未设置节点名（name字段），设置isParent为true");
-                        isParent = true;
-                    }
-
-                    // 如果还是map类型，那么特殊处理一波，判断是否是存储属性集合的，如果是，则将所有属性都放入
-                    if (Map.class.isAssignableFrom(editor.type())) {
-                        if (hasMapAttr) {
-                            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, StringUtils.format(
-                                "当前字段[{}]是map类型的属性字段，当前已经有一个map类型的属性字段[{}]了，不能出现两个", editor.name(), mapEditor.name()));
-                        } else {
-                            hasMapAttr = true;
-                            mapEditor = editor;
-                            attrMap = mapEditor.read(pojo);
-                            attrMap = attrMap == null ? newMap(mapEditor.type()) : attrMap;
-
-                            editor.write(pojo, attrMap);
-                        }
-                    }
-                } else {
-                    LOGGER.debug("字段[{}]对应的是节点", fieldName);
-                }
-            } else {
-                ignore = true;
-            }
-
-            // 不忽略并且字段不是map类型
-            if (!ignore) {
-                // 获取指定节点名的element
-                List<Element> nodes = (isAttr && isParent) ? Collections.singletonList(root) : root.elements(nodeName);
-                // 判断是否为空
-                if (nodes.isEmpty()) {
-                    // 如果为空那么将首字母大写后重新获取
-                    nodes = root.elements(StringUtils.toFirstUpperCase(nodeName));
-                }
-                if (!nodes.isEmpty()) {
-                    // 如果还不为空，那么为pojo赋值
-                    Class<?> type = editor.type();
-
-                    // 开始赋值
-                    // 判断字段是否是集合
-                    if (Collection.class.isAssignableFrom(type)) {
-                        // 是集合
-                        setValue(nodes, attributeName, pojo, editor);
-                    } else if (Map.class.isAssignableFrom(type)) {
-                        // 是Map
-
-                        if (!isAttr) {
-                            LOGGER.warn("当前暂时不支持解析map");
-                            continue;
-                        }
-
-                        Element element = StringUtils.isBlank(xmlNode.name()) ? root : root.element(xmlNode.name());
-
-                        if (element != null) {
-                            // 获取所有
-                            List<Attribute> attributes = element.attributes();
-
-                            for (Attribute attribute : attributes) {
-                                attrMap.put(attribute.getName(), attribute.getValue());
-                            }
-                        }
-                    } else {
-                        // 不是集合，直接赋值
-                        setValue(nodes.get(0), attributeName, pojo, editor);
-                    }
-                }
-            }
+        if (root == null) {
+            return null;
         }
-        return pojo;
+
+        XmlDeserializer<T> xmlDeserializer = (XmlDeserializer<T>)deserializers.compute(clazz, (key, deserializer) -> {
+            if (deserializer == null) {
+                deserializer = new BeanDeserializer<>(clazz, deserializers);
+            }
+            return deserializer;
+        });
+
+        return xmlDeserializer.read(root, null);
     }
 
     /**
@@ -661,139 +577,6 @@ public class Dom4JXmlCodec implements Codec {
             type = fieldType;
         }
         return type;
-    }
-
-    /**
-     * 往pojo中指定字段设置值
-     *
-     * @param element
-     *            要设置的数据节点
-     * @param attrName
-     *            要获取的属性名，如果该值不为空则认为数据需要从属性中取而不是从节点数据中取
-     * @param pojo
-     *            pojo
-     * @param editor
-     *            字段编辑器
-     */
-    private void setValue(Element element, String attrName, Object pojo, PropertyEditor editor) {
-        XmlNode attrXmlNode = editor.getAnnotation(XmlNode.class);
-        LOGGER.debug("要赋值的fieldName为{}", editor.name());
-        final XmlTypeConvert<?> convert = XmlTypeConverterUtil.resolve(attrXmlNode, editor);
-        if (!BeanUtils.setProperty(pojo, editor.name(), convert.read(element, attrName))) {
-            LOGGER.debug("copy中复制{}时发生错误，属性[{}]的值将被忽略", editor.name(), editor.name());
-        }
-    }
-
-    /**
-     * 往pojo中指定字段设置值（字段为Collection类型）
-     *
-     * @param elements
-     *            要设置的数据节点
-     * @param attrName
-     *            要获取的属性名，如果该值不为空则认为数据需要从属性中取而不是从节点数据中取
-     * @param pojo
-     *            pojo
-     * @param editor
-     *            字段编辑器
-     * @param <T>
-     *            字段类型
-     */
-    @SuppressWarnings("unchecked")
-    private <T> void setValue(List<Element> elements, String attrName, Object pojo, PropertyEditor editor) {
-        XmlNode attrXmlNode = editor.getAnnotation(XmlNode.class);
-        LOGGER.debug("要赋值的fieldName为{}", editor.name());
-        final XmlTypeConvert<?> convert = XmlTypeConverterUtil.resolve(attrXmlNode, editor);
-
-        // 实际最终使用集合类型
-        Class<? extends Collection<T>> collectionClass;
-        // 字段真实类型
-        Class<? extends Collection<T>> real = (Class<? extends Collection<T>>)editor.type();
-
-        if (attrXmlNode != null) {
-            collectionClass = (Class<? extends Collection<T>>)attrXmlNode.arrayType();
-
-            if (Collection.class.equals(collectionClass)) {
-                // 用户没有指定，使用字段真实类型
-                collectionClass = real;
-            } else if (!real.isAssignableFrom(collectionClass)) {
-                // 强校验
-                throw new SerializeException(ErrorCodeEnum.CODE_ERROR, StringUtils
-                    .format("字段[{}]解析错误,用户指定的集合类型[{}]不是字段的实际集合类型[{}]的子类", editor.original(), collectionClass, real));
-            }
-        } else {
-            collectionClass = real;
-        }
-
-        // 最终使用的列表
-        List<Element> elementList = elements;
-        if (attrXmlNode != null && StringUtils.isNotBlank(attrXmlNode.arrayRoot()) && !elements.isEmpty()) {
-            elementList = elements.get(0).elements(attrXmlNode.arrayRoot());
-        }
-
-        // 将数据转换为用户指定数据
-        List<T> list = elementList.stream().map(d -> (T)convert.read(d, attrName)).collect(Collectors.toList());
-
-        if (!trySetValue(list, pojo, editor, collectionClass)) {
-            LOGGER.warn("无法为字段[{}]赋值", editor.name());
-        }
-    }
-
-    /**
-     * 尝试为list类型的字段赋值
-     *
-     * @param datas
-     *            转换后的数据
-     * @param pojo
-     *            要赋值的pojo
-     * @param editor
-     *            要赋值的字段编辑器
-     * @param clazz
-     *            集合的Class对象
-     * @return 返回true表示赋值成功，返回false表示赋值失败
-     */
-    private <T> boolean trySetValue(List<T> datas, Object pojo, PropertyEditor editor,
-        Class<? extends Collection<T>> clazz) {
-
-        Collection<T> collection = tryBuildCollection(clazz);
-
-        if (collection == null) {
-            LOGGER.warn("无法为class[{}]构建实例", clazz);
-            return false;
-        }
-
-        collection.addAll(datas);
-        try {
-            return BeanUtils.setProperty(pojo, editor.name(), collection);
-        } catch (Exception e) {
-            LOGGER.debug(e, "字段[{}]赋值失败，使用的集合类为[{}]", editor.name(), clazz);
-            return false;
-        }
-    }
-
-    /**
-     * 根据class尝试构建出集合实例，有可能返回null，禁止抛出异常
-     *
-     * @param clazz
-     *            集合的Class对象
-     * @return 集合实例
-     */
-    private <T> Collection<T> tryBuildCollection(Class<? extends Collection<T>> clazz) {
-        if (List.class.isAssignableFrom(clazz)) {
-            try {
-                return clazz.newInstance();
-            } catch (Exception e) {
-                return new ArrayList<>();
-            }
-        } else if (Set.class.isAssignableFrom(clazz)) {
-            try {
-                return clazz.newInstance();
-            } catch (Exception e) {
-                return new HashSet<>();
-            }
-        } else {
-            LOGGER.warn("未知集合类型：[{}]", clazz);
-            return null;
-        }
     }
 
     @Override
