@@ -14,3 +14,4 @@
 ##v2.0.3
 - PemUtil增加将rsa密钥以pem格式写出到文件；
 - 增加`AES_256_PKCS5Padding`支持；
+- 增加`com.github.joekerouac.common.tools.codec.HexCodec`，处理hex；
