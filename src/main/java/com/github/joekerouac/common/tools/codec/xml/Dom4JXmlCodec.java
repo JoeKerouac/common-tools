@@ -374,7 +374,7 @@ public class Dom4JXmlCodec implements Codec {
         String rootName = defaultRootName;
 
         if (rootName == null) {
-            XmlNode xmlNode = source.getClass().getDeclaredAnnotation(XmlNode.class);
+            XmlNode xmlNode = getXmlNodeFromClass(source.getClass());
             rootName = xmlNode == null ? null : xmlNode.name();
         }
 
@@ -577,6 +577,26 @@ public class Dom4JXmlCodec implements Codec {
             type = fieldType;
         }
         return type;
+    }
+
+    /**
+     * 从类上获取XmlNode注解，如果不存在则尝试从父类上获取
+     * 
+     * @param clazz
+     *            class
+     * @return XmlNode
+     */
+    private XmlNode getXmlNodeFromClass(Class<?> clazz) {
+        XmlNode xmlNode = clazz.getDeclaredAnnotation(XmlNode.class);
+        if (xmlNode != null) {
+            return xmlNode;
+        }
+
+        if (clazz.getSuperclass().equals(Object.class)) {
+            return null;
+        }
+
+        return getXmlNodeFromClass(clazz.getSuperclass());
     }
 
     @Override
