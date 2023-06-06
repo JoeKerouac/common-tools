@@ -12,8 +12,8 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
-import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -38,7 +38,6 @@ import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
 import com.github.joekerouac.common.tools.codec.xml.deserializer.BeanDeserializer;
 import com.github.joekerouac.common.tools.codec.xml.deserializer.Deserializers;
-import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.reflect.AccessorUtil;
@@ -72,9 +71,16 @@ public class Dom4JXmlCodec implements Codec {
 
     private final Map<Class<?>, XmlDeserializer<?>> deserializers;
 
+    private final boolean writeHeader;
+
     public Dom4JXmlCodec() {
-        this.reader = new SAXReader();
-        this.deserializers = new ConcurrentHashMap<>();
+        this(false);
+    }
+
+    public Dom4JXmlCodec(boolean writeHeader) {
+        this.writeHeader = writeHeader;
+        reader = new SAXReader();
+        deserializers = new ConcurrentHashMap<>();
         deserializers.putAll(Deserializers.defaultDeserializers);
         enableDTD(false);
     }
@@ -331,10 +337,12 @@ public class Dom4JXmlCodec implements Codec {
      *
      * @param source
      *            bean
+     * @param charset
+     *            字符集
      * @return 解析结果
      */
-    public String toXml(Object source) {
-        return toXml(source, null, false);
+    public String toXml(Object source, Charset charset) {
+        return toXml(source, charset, null, false);
     }
 
     /**
@@ -342,14 +350,16 @@ public class Dom4JXmlCodec implements Codec {
      *
      * @param source
      *            bean
+     * @param charset
+     *            字符集
      * @param rootName
      *            根节点名称，如果为null则会尝试使用默认值
      * @param hasNull
      *            是否包含null元素（true：包含）
      * @return 解析结果
      */
-    public String toXml(Object source, String rootName, boolean hasNull) {
-        return toXml(source, rootName, hasNull, false);
+    public String toXml(Object source, Charset charset, String rootName, boolean hasNull) {
+        return toXml(source, charset, rootName, hasNull, false);
     }
 
     /**
@@ -357,6 +367,8 @@ public class Dom4JXmlCodec implements Codec {
      *
      * @param source
      *            bean
+     * @param charset
+     *            字符集
      * @param defaultRootName
      *            根节点名称，如果为null则会尝试使用默认值
      * @param hasNull
@@ -365,7 +377,7 @@ public class Dom4JXmlCodec implements Codec {
      *            是否美化输出，true表示美化输出
      * @return 解析结果
      */
-    public String toXml(Object source, String defaultRootName, boolean hasNull, boolean pretty) {
+    public String toXml(Object source, Charset charset, String defaultRootName, boolean hasNull, boolean pretty) {
         if (source == null) {
             LOGGER.warn("传入的source为null，返回null");
             return null;
@@ -388,17 +400,21 @@ public class Dom4JXmlCodec implements Codec {
         Long end = System.currentTimeMillis();
         LOGGER.debug("解析xml用时" + (end - start) + "ms");
 
-        if (!pretty) {
-            return root.asXML();
-        }
-        OutputFormat format = OutputFormat.createPrettyPrint();
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        OutputFormat format = pretty ? OutputFormat.createPrettyPrint() : new OutputFormat();
+        format.setEncoding(charset.name());
+        StringWriter out = new StringWriter();
 
         try {
-            XMLWriter writer = new XMLWriter(outputStream, format);
-            writer.write(root);
-            writer.close();
-            return outputStream.toString(Const.DEFAULT_CHARSET.name());
+            XMLWriter writer = new XMLWriter(out, format);
+
+            if (writeHeader) {
+                Document document = DocumentHelper.createDocument(root);
+                writer.write(document);
+            } else {
+                writer.write(root);
+            }
+            writer.flush();
+            return out.toString();
         } catch (Exception e) {
             throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, "序列化异常", e);
         }
@@ -611,7 +627,7 @@ public class Dom4JXmlCodec implements Codec {
 
     @Override
     public byte[] write(Object data, Charset charset) {
-        return toXml(data).getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
+        return toXml(data, charset).getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
     }
 
     /**

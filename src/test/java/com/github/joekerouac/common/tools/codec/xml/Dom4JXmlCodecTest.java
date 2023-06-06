@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -72,7 +73,7 @@ public class Dom4JXmlCodecTest {
         Map<String, Object> map = new HashMap<>();
         map.put("test", "test");
         map.put("user", user);
-        String xml = PARSER.toXml(map);
+        String xml = PARSER.toXml(map, Charset.defaultCharset());
         Assert.assertEquals(xml, MAP_XML);
     }
 
@@ -80,12 +81,12 @@ public class Dom4JXmlCodecTest {
     public void doToXml() {
         User user = build();
 
-        String xml = PARSER.toXml(user, "USER", true);
+        String xml = PARSER.toXml(user, Charset.defaultCharset(), "USER", true);
         Assert.assertEquals(xml, HASNULL);
-        xml = PARSER.toXml(user, "USER", false);
+        xml = PARSER.toXml(user, Charset.defaultCharset(), "USER", false);
         Assert.assertEquals(xml, NOTHASNULL);
 
-        Assert.assertTrue(StringUtils.isNotBlank(PARSER.toXml(user, null, true, true)));
+        Assert.assertTrue(StringUtils.isNotBlank(PARSER.toXml(user, Charset.defaultCharset(), null, true, true)));
     }
 
     @SuppressWarnings("unchecked")
@@ -136,7 +137,8 @@ public class Dom4JXmlCodecTest {
         XmlObj xmlObj = new XmlObj();
         xmlObj.setMap(map);
 
-        Assert.assertEquals(PARSER.read(PARSER.toXml(new XmlObj()).getBytes(), XmlObj.class), xmlObj);
+        Assert.assertEquals(PARSER.read(PARSER.toXml(new XmlObj(), Charset.defaultCharset()).getBytes(), XmlObj.class),
+            xmlObj);
 
         xmlObj.setList(Arrays.asList("list1", "list2"));
 
