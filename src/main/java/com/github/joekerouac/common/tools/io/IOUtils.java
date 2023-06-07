@@ -12,10 +12,14 @@
  */
 package com.github.joekerouac.common.tools.io;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.util.Assert;
 
 import lombok.AccessLevel;
@@ -52,7 +56,7 @@ public class IOUtils {
      * @return 输入流剩余的内容
      */
     public static byte[] read(InputStream inputStream, boolean close) {
-        byte[] buffer = new byte[2048];
+        byte[] buffer = new byte[4096];
         int len;
 
         try {
@@ -127,7 +131,7 @@ public class IOUtils {
      *            是否关闭输入流，true表示读取完毕关闭输入流，注意，这个关闭的是输入流，不是输出流
      */
     public static void write(OutputStream outputStream, InputStream inputStream, boolean close) {
-        byte[] buffer = new byte[2048];
+        byte[] buffer = new byte[4096];
         int len;
         try {
             while ((len = inputStream.read(buffer)) > 0) {

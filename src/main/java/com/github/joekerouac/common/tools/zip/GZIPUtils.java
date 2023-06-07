@@ -12,17 +12,26 @@
  */
 package com.github.joekerouac.common.tools.zip;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.Const;
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.file.FileUtils;
 import com.github.joekerouac.common.tools.io.IOUtils;
 
@@ -38,6 +47,26 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GZIPUtils {
+
+    /**
+     * 将指定文件列表写入指定新建ZipFile，所有文件平铺写入，不创建目录
+     * 
+     * @param files
+     *            文件
+     * @param zipFile
+     *            新建zip文件
+     * @throws IOException
+     *             IO异常
+     */
+    public static void zip(List<File> files, File zipFile) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+            for (File file : files) {
+                zos.putNextEntry(new ZipEntry(file.getName()));
+                IOUtils.write(zos, new FileInputStream(file), true);
+                zos.close();
+            }
+        }
+    }
 
     /**
      * 对指定数据进行压缩
