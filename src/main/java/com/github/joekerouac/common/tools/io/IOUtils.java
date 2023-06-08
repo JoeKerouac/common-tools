@@ -12,11 +12,18 @@
  */
 package com.github.joekerouac.common.tools.io;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.function.Consumer;
 
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
@@ -159,6 +166,69 @@ public class IOUtils {
             closeable.close();
         } catch (IOException e) {
             throw new CommonException(ErrorCodeEnum.IO_EXCEPTION, e);
+        }
+    }
+
+    /**
+     * 将输入流copy为另外一个输入流，如果输入流超过传入buffer大小，将会写入本地临时文件
+     * 
+     * @param stream
+     *            输入流
+     * @param buffer
+     *            buffer
+     * @param consumer
+     *            数据消费者，每当从传入的输入流中读取到数据时会先传入本消费器消费，允许为空
+     * @return 新的输入流
+     * @throws IOException
+     *             IO异常
+     */
+    public static InputStream copy(InputStream stream, byte[] buffer, Consumer<ByteBufferRef> consumer)
+        throws IOException {
+        if (stream == null || buffer == null) {
+            throw new NullPointerException("stream或者buffer不能为null");
+        }
+
+        int len;
+        int index = 0;
+        File file = null;
+        OutputStream fos = null;
+
+        try {
+            while ((len = stream.read(buffer, index, buffer.length - index)) > 0) {
+                if (consumer != null) {
+                    consumer.accept(new ByteBufferRef(buffer, index, len));
+                }
+
+                index += len;
+                // buffer满了，则写入临时文件，同时重置index
+                if (index == buffer.length) {
+                    if (file == null) {
+                        file = File.createTempFile("InputStream", ".tmp");
+                        fos = new FileOutputStream(file);
+                        fos = buffer.length < 256 ? new BufferedOutputStream(fos, 4096) : fos;
+                    }
+                    fos.write(buffer);
+                    index = 0;
+                }
+            }
+
+            if (index > 0 && fos != null) {
+                fos.write(buffer, 0, index);
+            }
+
+            if (fos != null) {
+                fos.flush();
+            }
+
+            if (file != null) {
+                return Files.newInputStream(file.toPath(), StandardOpenOption.READ, StandardOpenOption.DELETE_ON_CLOSE);
+            } else {
+                return new ByteArrayInputStream(buffer, 0, index);
+            }
+        } finally {
+            if (fos != null) {
+                fos.close();
+            }
         }
     }
 }

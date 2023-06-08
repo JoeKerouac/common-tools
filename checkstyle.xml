@@ -126,7 +126,7 @@
 
         <!-- 参数命名规范 -->
         <module name="ParameterName">
-            <property name="format" value="^[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+            <property name="format" value="^[a-z]([a-zA-Z0-9]*)?$"/>
         </module>
 
         <!-- class名称规范 -->
