@@ -14,7 +14,6 @@ package com.github.joekerouac.common.tools.io;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
@@ -63,16 +63,47 @@ public class IOUtils {
      * @return 输入流剩余的内容
      */
     public static byte[] read(InputStream inputStream, boolean close) {
-        byte[] buffer = new byte[4096];
-        int len;
+        return read(inputStream, 4096, close);
+    }
 
+    /**
+     * 将输入流剩余内容全部读取到byte数组，IO异常会被捕获，抛出一个PluginException，cause by是对应的IO异常
+     *
+     * @param inputStream
+     *            输入流
+     * @param bufferSize
+     *            buffer大小
+     * @param close
+     *            是否关闭，true表示读取完毕关闭流
+     * @return 输入流剩余的内容
+     */
+    public static byte[] read(InputStream inputStream, int bufferSize, boolean close) {
+        byte[] buffer = new byte[bufferSize];
+        int len;
+        int index = 0;
         try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            while ((len = inputStream.read(buffer)) > 0) {
-                outputStream.write(buffer, 0, len);
+            while ((len = inputStream.read(buffer, index, buffer.length - index)) > 0) {
+                index += len;
+                // buffer已经写满
+                if (index == buffer.length) {
+                    // 判断是否还有数据；PS: 这里这么判断的原因是因为外部可能精准的知道流中有多少数据，所以传入的buffer大小刚好，我们这里判断下就可以避免不必要的扩容
+                    int read = inputStream.read();
+                    if (read > 0) {
+                        // 还有数据，扩容buffer
+                        buffer = new byte[(int)Math.min(buffer.length * 3L / 2, Integer.MAX_VALUE)];
+                        buffer[index] = (byte)read;
+                        index += 1;
+                    }
+                }
             }
 
-            return outputStream.toByteArray();
+            if (index == buffer.length) {
+                return buffer;
+            } else if (index == 0) {
+                return new byte[0];
+            } else {
+                return Arrays.copyOf(buffer, index);
+            }
         } catch (IOException e) {
             throw new CommonException(ErrorCodeEnum.IO_EXCEPTION, e);
         } finally {

@@ -15,3 +15,4 @@
 - PemUtil增加将rsa密钥以pem格式写出到文件；
 - 增加`AES_256_PKCS5Padding`支持；
 - 增加`com.github.joekerouac.common.tools.codec.HexCodec`，处理hex；
+- IHttpClient优化，当响应过大时将响应写入本地临时文件，防止发生OOM；

@@ -22,12 +22,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.hc.client5.http.async.methods.SimpleBody;
-import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
-import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.Message;
 
 import com.github.joekerouac.common.tools.constant.Const;
+import com.github.joekerouac.common.tools.io.IOUtils;
+import com.github.joekerouac.common.tools.io.InMemoryFile;
 import com.github.joekerouac.common.tools.net.http.exception.ServerException;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.JsonUtil;
@@ -58,9 +59,9 @@ public class IHttpResponse {
     private final int status;
 
     /**
-     * 响应数据
+     * 输入流
      */
-    private final byte[] data;
+    private final InputStream stream;
 
     /**
      * 请求中的异常，如果没有异常那么该值为空
@@ -77,21 +78,40 @@ public class IHttpResponse {
      */
     private final String charset;
 
-    public IHttpResponse(SimpleHttpResponse httpResponse) {
+    /**
+     * 数据长度
+     */
+    private final int len;
+
+    /**
+     * 数据，第一次获取时初始化
+     */
+    private volatile byte[] data;
+
+    public IHttpResponse(Message<HttpResponse, InMemoryFile> message) {
+        HttpResponse httpResponse = message.getHead();
         this.status = httpResponse.getCode();
         this.headers = Arrays.asList(httpResponse.getHeaders());
-        this.data = Optional.ofNullable(httpResponse.getBody()).map(SimpleBody::getBodyBytes).orElse(new byte[0]);
-        this.charset = Optional.ofNullable(httpResponse.getBody()).map(SimpleBody::getContentType)
-            .map(ContentType::getCharset).orElse(Const.DEFAULT_CHARSET).name();
+        InMemoryFile file = message.getBody();
+        this.len = file.getLen();
+        try {
+            this.stream = file.getDataAsInputStream();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        this.charset = Optional.ofNullable(file.getCharset()).orElse(Const.DEFAULT_CHARSET).name();
 
         if (status >= ERR400) {
             ErrorResp resp = null;
-            String msg = new String(this.data, Charset.forName(this.charset));
+            byte[] data = IOUtils.read(stream, file.getLen(), true);
+            String msg = null;
 
             try {
-                resp = JsonUtil.read(this.data, ErrorResp.class);
+                resp = JsonUtil.read(data, Charset.forName(charset), ErrorResp.class);
             } catch (Exception e) {
                 // 异常忽略
+                msg = new String(data, Charset.forName(this.charset));
                 LOGGER.info("响应4xx数据无法解析，数据为：[{}]", msg);
             }
 
@@ -186,7 +206,11 @@ public class IHttpResponse {
      *             IOException
      */
     public InputStream getResultAsStream() throws IOException {
-        return new ByteArrayInputStream(getResultAsBinary());
+        if (data == null) {
+            return stream;
+        } else {
+            return new ByteArrayInputStream(data);
+        }
     }
 
     /**
@@ -197,6 +221,10 @@ public class IHttpResponse {
     public synchronized byte[] getResultAsBinary() {
         if (exception != null) {
             throw exception;
+        }
+
+        if (data == null) {
+            data = IOUtils.read(stream, len, true);
         }
 
         return this.data;

@@ -20,7 +20,11 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -31,8 +35,6 @@ import javax.net.ssl.SSLContext;
 
 import org.apache.hc.client5.http.DnsResolver;
 import org.apache.hc.client5.http.SystemDefaultDnsResolver;
-import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
-import org.apache.hc.client5.http.async.methods.SimpleResponseConsumer;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.StandardAuthScheme;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
@@ -49,8 +51,13 @@ import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBu
 import org.apache.hc.client5.http.nio.AsyncClientConnectionManager;
 import org.apache.hc.client5.http.protocol.RedirectStrategy;
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
-import org.apache.hc.core5.http.*;
 import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpException;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.Message;
 import org.apache.hc.core5.http.config.CharCodingConfig;
 import org.apache.hc.core5.http.config.Http1Config;
 import org.apache.hc.core5.http.io.entity.StringEntity;
@@ -59,6 +66,7 @@ import org.apache.hc.core5.http.nio.AsyncRequestProducer;
 import org.apache.hc.core5.http.nio.DataStreamChannel;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.http.nio.support.BasicRequestProducer;
+import org.apache.hc.core5.http.nio.support.BasicResponseConsumer;
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy;
 import org.apache.hc.core5.pool.PoolReusePolicy;
 import org.apache.hc.core5.reactor.IOReactorConfig;
@@ -69,6 +77,7 @@ import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.concurrent.FutureCallback;
 import com.github.joekerouac.common.tools.concurrent.ResultConvertFuture;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
+import com.github.joekerouac.common.tools.io.InMemoryFile;
 import com.github.joekerouac.common.tools.log.Logger;
 import com.github.joekerouac.common.tools.net.http.config.AbstractHttpConfig;
 import com.github.joekerouac.common.tools.net.http.config.HttpProxy;
@@ -81,6 +90,7 @@ import com.github.joekerouac.common.tools.net.http.cookie.impl.CookieStoreImpl;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
 import com.github.joekerouac.common.tools.net.http.request.IHttpPost;
 import com.github.joekerouac.common.tools.net.http.response.IHttpResponse;
+import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.thread.NamedThreadFactory;
 import com.github.joekerouac.common.tools.thread.UncaughtExceptionHandlerThreadFactory;
@@ -217,13 +227,16 @@ public final class IHttpClient implements AutoCloseable {
         FutureCallback<IHttpResponse> callback = futureCallback == null ? EMPTY_CALLBACK : futureCallback;
 
         AsyncRequestProducer requestProducer = buildSimpleHttpRequest(request);
+        AbstractHttpConfig config = request.getHttpConfig() == null ? this.config : request.getHttpConfig();
 
+        BasicResponseConsumer<InMemoryFile> responseConsumer = new BasicResponseConsumer<>(
+            new StreamAsyncEntityConsumer(config.getInitBufferSize(), config.getWriteFileOnLarge()));
         // 发起请求
-        Future<SimpleHttpResponse> future = httpClient.execute(requestProducer, SimpleResponseConsumer.create(),
-            new org.apache.hc.core5.concurrent.FutureCallback<SimpleHttpResponse>() {
+        Future<Message<HttpResponse, InMemoryFile>> future = httpClient.execute(requestProducer, responseConsumer,
+            new org.apache.hc.core5.concurrent.FutureCallback<Message<HttpResponse, InMemoryFile>>() {
                 @Override
-                public void completed(SimpleHttpResponse result) {
-                    IHttpResponse response = new IHttpResponse(result);
+                public void completed(Message<HttpResponse, InMemoryFile> message) {
+                    IHttpResponse response = new IHttpResponse(message);
                     try {
                         callback.success(response);
                     } catch (Throwable throwable) {
