@@ -46,7 +46,7 @@ public abstract class AbstractHttpConfig {
     /**
      * 默认最大响应体，当响应体大于该值时写入本地文件缓冲，单位byte
      */
-    private static final int DEFAULT_WRITE_FILE_ON_LARGE = 1024 * 1024 * 10;
+    private static final int DEFAULT_WRITE_FILE_ON_LARGE = 1024 * 1024;
 
     /**
      * 数据传输超时时间，单位毫秒，默认一分钟
