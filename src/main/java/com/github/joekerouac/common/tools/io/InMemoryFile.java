@@ -45,6 +45,11 @@ public class InMemoryFile {
      */
     private final int limit;
 
+    /**
+     * 数据过滤器，写出数据时先经过该过滤器
+     */
+    private final DataFilter filter;
+
     private OutputStream outputStream;
 
     private volatile File file;
@@ -63,8 +68,13 @@ public class InMemoryFile {
     private volatile Charset charset;
 
     public InMemoryFile(int initBuffer, int limit) {
+        this(initBuffer, limit, null);
+    }
+
+    public InMemoryFile(int initBuffer, int limit, DataFilter filter) {
         this.limit = limit;
         this.buffer = new byte[initBuffer];
+        this.filter = filter;
         this.index = 0;
         this.close = false;
         this.len = 0;
@@ -74,25 +84,34 @@ public class InMemoryFile {
         write(new byte[] {data}, 0, 1);
     }
 
-    public void write(byte[] data, int offset, int len) throws IOException {
-        if (data == null) {
+    public void write(byte[] d, int o, int l) throws IOException {
+        if (d == null) {
             throw new NullPointerException();
-        } else if (offset < 0 || len < 0 || len > data.length - offset) {
+        } else if (o < 0 || l < 0 || l > d.length - o) {
             throw new IndexOutOfBoundsException();
-        } else if (len == 0) {
+        } else if (l == 0) {
             return;
         } else if (close) {
             throw new IOException("文件已经关闭，无法写入");
         }
 
-        Assert.assertTrue(this.len + len > 0, "当前累计写出数据过大，无法继续写入",
+        Assert.assertTrue(this.len + l > 0, "当前累计写出数据过大，无法继续写入",
             ExceptionProviderConst.UnsupportedOperationExceptionProvider);
+
+        ByteBufferRef ref = new ByteBufferRef(d, o, l);
+        if (filter != null) {
+            ref = this.filter.filter(ref);
+        }
+
+        byte[] data = ref.getData();
+        int offset = ref.getOffset();
+        int len = ref.getLen();
 
         int writeLen = Math.min(len, buffer.length - index);
         if (writeLen < len) {
-            if (limit - buffer.length + writeLen >= len) {
+            if ((limit - index) >= len) {
                 // 扩容后不超过limit
-                int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len - writeLen + buffer.length);
+                int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len + index);
                 newBufferSize = (limit - newBufferSize) < (newBufferSize / 10 * 3) ? limit : newBufferSize;
                 byte[] newBuffer = new byte[newBufferSize];
                 System.arraycopy(buffer, 0, newBuffer, 0, index);
@@ -105,12 +124,18 @@ public class InMemoryFile {
                     file = File.createTempFile("WriteCache", ".tmp");
                     outputStream = new FileOutputStream(file);
                 }
+
                 outputStream.write(buffer, 0, index);
                 outputStream.write(data, offset, len);
+
                 index = 0;
+                // 直接扩容
+                if (buffer.length < limit) {
+                    buffer = new byte[limit];
+                }
             }
         } else {
-            System.arraycopy(data, 0, buffer, index, len);
+            System.arraycopy(data, offset, buffer, index, len);
             index += len;
         }
 
