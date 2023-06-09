@@ -92,8 +92,9 @@ public class InMemoryFile {
         if (writeLen < len) {
             if (limit - buffer.length + writeLen >= len) {
                 // 扩容后不超过limit
-                byte[] newBuffer =
-                    new byte[Math.max(Math.min(buffer.length * 3 / 2, limit), len - writeLen + buffer.length)];
+                int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len - writeLen + buffer.length);
+                newBufferSize = (limit - newBufferSize) < (newBufferSize / 10 * 3) ? limit : newBufferSize;
+                byte[] newBuffer = new byte[newBufferSize];
                 System.arraycopy(buffer, 0, newBuffer, 0, index);
                 System.arraycopy(data, offset, newBuffer, index, len);
                 buffer = newBuffer;
