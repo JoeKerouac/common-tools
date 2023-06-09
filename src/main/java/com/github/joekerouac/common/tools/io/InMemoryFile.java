@@ -45,13 +45,13 @@ public class InMemoryFile {
      */
     private final int limit;
 
-    private volatile File file;
-
     private OutputStream outputStream;
 
-    private byte[] buffer;
+    private volatile File file;
 
-    private int index;
+    private volatile byte[] buffer;
+
+    private volatile int index;
 
     private volatile boolean close;
 
@@ -108,6 +108,9 @@ public class InMemoryFile {
                 outputStream.write(data, offset, len);
                 index = 0;
             }
+        } else {
+            System.arraycopy(data, 0, buffer, index, len);
+            index += len;
         }
 
         this.len += len;
@@ -137,7 +140,9 @@ public class InMemoryFile {
      */
     public void writeFinish() throws IOException {
         flush();
-        outputStream.close();
+        if (outputStream != null) {
+            outputStream.close();
+        }
         close = true;
     }
 
