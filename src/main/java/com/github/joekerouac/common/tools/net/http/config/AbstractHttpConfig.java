@@ -14,6 +14,8 @@ package com.github.joekerouac.common.tools.net.http.config;
 
 import java.net.InetAddress;
 
+import com.github.joekerouac.common.tools.io.DataFilter;
+
 import lombok.Data;
 
 /**
@@ -70,6 +72,11 @@ public abstract class AbstractHttpConfig {
      * 初始化buffer大小，允许逐渐扩充到{@link #writeFileOnLarge}指定大小，然后将数据刷入临时文件
      */
     private int initBufferSize = 1024;
+
+    /**
+     * 响应数据filter
+     */
+    private DataFilter filter;
 
     /**
      * 要绑定的本地网卡地址，允许为空

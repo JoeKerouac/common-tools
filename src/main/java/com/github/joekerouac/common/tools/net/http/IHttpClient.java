@@ -87,10 +87,10 @@ import com.github.joekerouac.common.tools.net.http.cookie.Cookie;
 import com.github.joekerouac.common.tools.net.http.cookie.CookieStore;
 import com.github.joekerouac.common.tools.net.http.cookie.CookieUtil;
 import com.github.joekerouac.common.tools.net.http.cookie.impl.CookieStoreImpl;
+import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
 import com.github.joekerouac.common.tools.net.http.request.IHttpPost;
 import com.github.joekerouac.common.tools.net.http.response.IHttpResponse;
-import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.thread.NamedThreadFactory;
 import com.github.joekerouac.common.tools.thread.UncaughtExceptionHandlerThreadFactory;
@@ -229,8 +229,9 @@ public final class IHttpClient implements AutoCloseable {
         AsyncRequestProducer requestProducer = buildSimpleHttpRequest(request);
         AbstractHttpConfig config = request.getHttpConfig() == null ? this.config : request.getHttpConfig();
 
-        BasicResponseConsumer<InMemoryFile> responseConsumer = new BasicResponseConsumer<>(
-            new StreamAsyncEntityConsumer(config.getInitBufferSize(), config.getWriteFileOnLarge()));
+        BasicResponseConsumer<InMemoryFile> responseConsumer =
+            new BasicResponseConsumer<>(new StreamAsyncEntityConsumer(config.getInitBufferSize(),
+                config.getWriteFileOnLarge(), config.getFilter()));
         // 发起请求
         Future<Message<HttpResponse, InMemoryFile>> future = httpClient.execute(requestProducer, responseConsumer,
             new org.apache.hc.core5.concurrent.FutureCallback<Message<HttpResponse, InMemoryFile>>() {
