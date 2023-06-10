@@ -19,7 +19,7 @@ import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.nio.entity.AbstractBinAsyncEntityConsumer;
 
-import com.github.joekerouac.common.tools.io.DataFilter;
+import com.github.joekerouac.common.tools.io.StreamFilter;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
 
 /**
@@ -31,7 +31,7 @@ public class StreamAsyncEntityConsumer extends AbstractBinAsyncEntityConsumer<In
 
     private InMemoryFile file;
 
-    public StreamAsyncEntityConsumer(int initBufferSize, int writeFileOnLarge, DataFilter filter) {
+    public StreamAsyncEntityConsumer(int initBufferSize, int writeFileOnLarge, StreamFilter filter) {
         this.file = new InMemoryFile(initBufferSize, writeFileOnLarge, filter);
     }
 

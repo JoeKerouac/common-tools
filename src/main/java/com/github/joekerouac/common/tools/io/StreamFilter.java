@@ -13,11 +13,13 @@
 package com.github.joekerouac.common.tools.io;
 
 /**
+ * 流filter
+ * 
  * @author JoeKerouac
  * @date 2023-06-09 10:54
  * @since 2.0.3
  */
-public interface DataFilter {
+public interface StreamFilter {
 
     /**
      * 过滤数据
@@ -27,5 +29,12 @@ public interface DataFilter {
      * @return 过滤后的数据
      */
     ByteBufferRef filter(ByteBufferRef ref);
+
+    /**
+     * 数据结束
+     */
+    default void finish() {
+
+    }
 
 }

@@ -14,7 +14,7 @@ package com.github.joekerouac.common.tools.net.http.config;
 
 import java.net.InetAddress;
 
-import com.github.joekerouac.common.tools.io.DataFilter;
+import com.github.joekerouac.common.tools.io.StreamFilter;
 
 import lombok.Data;
 
@@ -76,7 +76,7 @@ public abstract class AbstractHttpConfig {
     /**
      * 响应数据filter
      */
-    private DataFilter filter;
+    private StreamFilter filter;
 
     /**
      * 要绑定的本地网卡地址，允许为空

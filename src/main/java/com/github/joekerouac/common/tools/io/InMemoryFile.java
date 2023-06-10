@@ -48,7 +48,7 @@ public class InMemoryFile {
     /**
      * 数据过滤器，写出数据时先经过该过滤器
      */
-    private final DataFilter filter;
+    private final StreamFilter filter;
 
     private OutputStream outputStream;
 
@@ -71,7 +71,7 @@ public class InMemoryFile {
         this(initBuffer, limit, null);
     }
 
-    public InMemoryFile(int initBuffer, int limit, DataFilter filter) {
+    public InMemoryFile(int initBuffer, int limit, StreamFilter filter) {
         this.limit = limit;
         this.buffer = new byte[initBuffer];
         this.filter = filter;
@@ -168,6 +168,10 @@ public class InMemoryFile {
         flush();
         if (outputStream != null) {
             outputStream.close();
+        }
+
+        if (filter != null) {
+            filter.finish();
         }
         close = true;
     }
