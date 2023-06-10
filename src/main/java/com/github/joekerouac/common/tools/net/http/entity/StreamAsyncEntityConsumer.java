@@ -32,7 +32,7 @@ public class StreamAsyncEntityConsumer extends AbstractBinAsyncEntityConsumer<In
     private InMemoryFile file;
 
     public StreamAsyncEntityConsumer(int initBufferSize, int writeFileOnLarge, DataFilter filter) {
-        this.file = new InMemoryFile(initBufferSize, writeFileOnLarge);
+        this.file = new InMemoryFile(initBufferSize, writeFileOnLarge, filter);
     }
 
     @Override
