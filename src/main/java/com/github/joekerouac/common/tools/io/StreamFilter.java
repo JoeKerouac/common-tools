@@ -32,9 +32,11 @@ public interface StreamFilter {
 
     /**
      * 数据结束
+     *
+     * @return 最后还要补充的数据，返回null表示没有了
      */
-    default void finish() {
-
+    default ByteBufferRef finish() {
+        return null;
     }
 
 }

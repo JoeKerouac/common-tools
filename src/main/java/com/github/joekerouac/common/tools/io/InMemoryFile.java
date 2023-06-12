@@ -103,43 +103,7 @@ public class InMemoryFile {
             ref = this.filter.filter(ref);
         }
 
-        byte[] data = ref.getData();
-        int offset = ref.getOffset();
-        int len = ref.getLen();
-
-        int writeLen = Math.min(len, buffer.length - index);
-        if (writeLen < len) {
-            if ((limit - index) >= len) {
-                // 扩容后不超过limit
-                int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len + index);
-                newBufferSize = (limit - newBufferSize) < (newBufferSize / 10 * 3) ? limit : newBufferSize;
-                byte[] newBuffer = new byte[newBufferSize];
-                System.arraycopy(buffer, 0, newBuffer, 0, index);
-                System.arraycopy(data, offset, newBuffer, index, len);
-                buffer = newBuffer;
-                index += len;
-            } else {
-                // 扩容后超过limit了，将数据填满，写出到文件，然后继续填充
-                if (outputStream == null) {
-                    file = File.createTempFile("WriteCache", ".tmp");
-                    outputStream = new FileOutputStream(file);
-                }
-
-                outputStream.write(buffer, 0, index);
-                outputStream.write(data, offset, len);
-
-                index = 0;
-                // 直接扩容
-                if (buffer.length < limit) {
-                    buffer = new byte[limit];
-                }
-            }
-        } else {
-            System.arraycopy(data, offset, buffer, index, len);
-            index += len;
-        }
-
-        this.len += len;
+        write(ref);
     }
 
     /**
@@ -166,13 +130,20 @@ public class InMemoryFile {
      */
     public void writeFinish() throws IOException {
         flush();
+
+        ByteBufferRef ref = null;
+        if (filter != null) {
+            ref = filter.finish();
+        }
+
+        if (ref != null) {
+            write(ref);
+        }
+
         if (outputStream != null) {
             outputStream.close();
         }
 
-        if (filter != null) {
-            filter.finish();
-        }
         close = true;
     }
 
@@ -244,6 +215,54 @@ public class InMemoryFile {
 
     public Charset getCharset() {
         return charset;
+    }
+
+    /**
+     * 写入数据
+     * 
+     * @param ref
+     *            要写入的数据
+     * @throws IOException
+     *             IO异常
+     */
+    private void write(ByteBufferRef ref) throws IOException {
+        byte[] data = ref.getData();
+        int offset = ref.getOffset();
+        int len = ref.getLen();
+
+        int writeLen = Math.min(len, buffer.length - index);
+        if (writeLen < len) {
+            if ((limit - index) >= len) {
+                // 扩容后不超过limit
+                int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len + index);
+                newBufferSize = (limit - newBufferSize) < (newBufferSize / 10 * 3) ? limit : newBufferSize;
+                byte[] newBuffer = new byte[newBufferSize];
+                System.arraycopy(buffer, 0, newBuffer, 0, index);
+                System.arraycopy(data, offset, newBuffer, index, len);
+                buffer = newBuffer;
+                index += len;
+            } else {
+                // 扩容后超过limit了，将数据填满，写出到文件，然后继续填充
+                if (outputStream == null) {
+                    file = File.createTempFile("WriteCache", ".tmp");
+                    outputStream = new FileOutputStream(file);
+                }
+
+                outputStream.write(buffer, 0, index);
+                outputStream.write(data, offset, len);
+
+                index = 0;
+                // 直接扩容
+                if (buffer.length < limit) {
+                    buffer = new byte[limit];
+                }
+            }
+        } else {
+            System.arraycopy(data, offset, buffer, index, len);
+            index += len;
+        }
+
+        this.len += len;
     }
 
 }

@@ -28,6 +28,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ByteBufferRef {
 
+    public static final ByteBufferRef EMPTY = new ByteBufferRef(new byte[0], 0, 0);
+
     private byte[] data;
 
     /**
