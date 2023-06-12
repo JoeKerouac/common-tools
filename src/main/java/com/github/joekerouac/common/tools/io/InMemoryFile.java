@@ -103,7 +103,7 @@ public class InMemoryFile {
             ref = this.filter.filter(ref);
         }
 
-        write(ref);
+        write0(ref);
     }
 
     /**
@@ -137,7 +137,7 @@ public class InMemoryFile {
         }
 
         if (ref != null) {
-            write(ref);
+            write0(ref);
         }
 
         if (outputStream != null) {
@@ -225,7 +225,7 @@ public class InMemoryFile {
      * @throws IOException
      *             IO异常
      */
-    private void write(ByteBufferRef ref) throws IOException {
+    private void write0(ByteBufferRef ref) throws IOException {
         byte[] data = ref.getData();
         int offset = ref.getOffset();
         int len = ref.getLen();
