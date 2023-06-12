@@ -28,6 +28,7 @@ public class StreamBase64Test {
 
     @Test
     public void test() {
+        // 懒得构造每个场景的数据了，这里我们就随机构造数据，次数搞多点儿，尽量覆盖所有场景
         for (int i = 0; i < 100000; i++) {
             decoderTest();
         }
@@ -53,15 +54,17 @@ public class StreamBase64Test {
         StreamBase64.Decoder decoder = StreamBase64.newDecoder();
         if (new Random().nextInt() % 2 == 1) {
             result = new byte[data.length];
+
             int offset = 0;
             int resultOffset = 0;
             while (offset < encode.length) {
                 int len = Math.max(0, Math.abs(new Random().nextInt())) % 300 + 30;
                 len = Math.min(len, encode.length - offset);
-                resultOffset += decoder.update(encode, offset, len, result, resultOffset);
+                resultOffset += decoder.update(encode, offset, len, encode, resultOffset);
                 offset += len;
             }
 
+            System.arraycopy(encode, 0, result, 0, resultOffset);
             byte[] bytes = decoder.doFinal();
             System.arraycopy(bytes, 0, result, resultOffset, bytes.length);
         } else {
