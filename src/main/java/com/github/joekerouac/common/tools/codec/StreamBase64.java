@@ -430,7 +430,7 @@ public class StreamBase64 {
                     }
 
                     legacyLen = 0;
-                    return dp - srcOffset;
+                    return dp - dstOffset;
                 }
             }
 
