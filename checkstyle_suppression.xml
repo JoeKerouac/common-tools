@@ -13,4 +13,5 @@
     <suppress files="ConsoleUtil.java" checks="Regexp"/>
     <!-- 不对AbstractTypeReference进行字段名校验，里边的_type字段加了_前缀 -->
     <suppress files="AbstractTypeReference.java" checks="MemberName"/>
+    <suppress files="StreamBase64.java" checks="MultipleStringLiterals" />
 </suppressions>

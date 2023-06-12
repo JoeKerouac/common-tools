@@ -1,3 +1,15 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
+ * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
+ * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package com.github.joekerouac.common.tools.codec;
 
 import java.util.Arrays;
@@ -43,15 +55,17 @@ public class StreamBase64 {
     /**
      * 非线程安全
      */
-    public static class Decoder {
+    public static final class Decoder {
 
         private static final byte[] EMPTY = new byte[0];
 
         private static final int[] fromBase64 = new int[256];
+
         static {
             Arrays.fill(fromBase64, -1);
-            for (int i = 0; i < toBase64.length; i++)
+            for (int i = 0; i < toBase64.length; i++) {
                 fromBase64[toBase64[i]] = i;
+            }
             fromBase64['='] = -2;
         }
 
@@ -59,8 +73,9 @@ public class StreamBase64 {
 
         static {
             Arrays.fill(fromBase64URL, -1);
-            for (int i = 0; i < toBase64URL.length; i++)
+            for (int i = 0; i < toBase64URL.length; i++) {
                 fromBase64URL[toBase64URL[i]] = i;
+            }
             fromBase64URL['='] = -2;
         }
 
@@ -252,14 +267,16 @@ public class StreamBase64 {
                 }
 
                 if (!finish) {
-                    while (offset < endOffset) {
-                        int b = src[offset++] & 0xff;
+                    int i = offset;
+                    while (i < endOffset) {
+                        int b = src[i++] & 0xff;
                         if (b == '=') {
-                            dataLen -= (endOffset - offset + 1);
+                            dataLen -= (endOffset - i + 1);
                             break;
                         }
-                        if (base64[b] == -1)
+                        if (base64[b] == -1) {
                             n++;
+                        }
                     }
                     dataLen -= n;
 
@@ -268,20 +285,23 @@ public class StreamBase64 {
                 if (len > 1) {
                     if (src[endOffset - 1] == '=') {
                         paddings++;
-                        if (src[endOffset - 2] == '=')
+                        if (src[endOffset - 2] == '=') {
                             paddings++;
+                        }
                     }
                 } else if (len == 1) {
                     if (src[0] == '=') {
                         paddings++;
-                        if (legacy[legacyLen - 1] == '=')
+                        if (legacy[legacyLen - 1] == '=') {
                             paddings++;
+                        }
                     }
                 } else {
                     if (legacy[legacyLen - 1] == '=') {
                         paddings++;
-                        if (legacy[legacyLen - 2] == '=')
+                        if (legacy[legacyLen - 2] == '=') {
                             paddings++;
+                        }
                     }
                 }
             }
