@@ -12,18 +12,11 @@
  */
 package com.github.joekerouac.common.tools.io;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
-import java.util.function.Consumer;
 
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
@@ -201,65 +194,38 @@ public class IOUtils {
     }
 
     /**
-     * 将输入流copy为另外一个输入流，如果输入流超过传入buffer大小，将会写入本地临时文件
-     * 
+     * 将输入流copy到memory file，如果输入流超过传入limit大小，将会写入本地临时文件
+     *
      * @param stream
      *            输入流
-     * @param buffer
-     *            buffer
-     * @param consumer
-     *            数据消费者，每当从传入的输入流中读取到数据时会先传入本消费器消费，允许为空
+     * @param bufferSize
+     *            buffer size
+     * @param limit
+     *            内存中保留的最大buffer
+     * @param streamFilter
+     *            stream filter
      * @return 新的输入流
      * @throws IOException
      *             IO异常
      */
-    public static InputStream copy(InputStream stream, byte[] buffer, Consumer<ByteBufferRef> consumer)
+    public static InputStream copy(InputStream stream, int bufferSize, int limit, StreamFilter streamFilter)
         throws IOException {
-        if (stream == null || buffer == null) {
+        if (stream == null) {
             throw new NullPointerException("stream或者buffer不能为null");
+        } else if (bufferSize <= 0 || limit <= 0 || limit < bufferSize) {
+            throw new IllegalArgumentException("bufferSize、limit不能小于0，bufferSize不能大于limit");
         }
+
+        InMemoryFile memoryFile = new InMemoryFile(bufferSize, limit, streamFilter);
 
         int len;
-        int index = 0;
-        File file = null;
-        OutputStream fos = null;
+        byte[] buffer = new byte[bufferSize];
 
-        try {
-            while ((len = stream.read(buffer, index, buffer.length - index)) > 0) {
-                if (consumer != null) {
-                    consumer.accept(new ByteBufferRef(buffer, index, len));
-                }
-
-                index += len;
-                // buffer满了，则写入临时文件，同时重置index
-                if (index == buffer.length) {
-                    if (file == null) {
-                        file = File.createTempFile("InputStream", ".tmp");
-                        fos = new FileOutputStream(file);
-                        fos = buffer.length < 256 ? new BufferedOutputStream(fos, 4096) : fos;
-                    }
-                    fos.write(buffer);
-                    index = 0;
-                }
-            }
-
-            if (index > 0 && fos != null) {
-                fos.write(buffer, 0, index);
-            }
-
-            if (fos != null) {
-                fos.flush();
-            }
-
-            if (file != null) {
-                return Files.newInputStream(file.toPath(), StandardOpenOption.READ, StandardOpenOption.DELETE_ON_CLOSE);
-            } else {
-                return new ByteArrayInputStream(buffer, 0, index);
-            }
-        } finally {
-            if (fos != null) {
-                fos.close();
-            }
+        while ((len = stream.read(buffer, 0, buffer.length)) > 0) {
+            memoryFile.write(buffer, 0, len);
         }
+
+        memoryFile.writeFinish();
+        return memoryFile.getDataAsInputStream();
     }
 }

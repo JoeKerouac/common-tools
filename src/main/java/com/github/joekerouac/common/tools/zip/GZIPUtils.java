@@ -63,7 +63,6 @@ public class GZIPUtils {
             for (File file : files) {
                 zos.putNextEntry(new ZipEntry(file.getName()));
                 IOUtils.write(zos, new FileInputStream(file), true);
-                zos.close();
             }
         }
     }
