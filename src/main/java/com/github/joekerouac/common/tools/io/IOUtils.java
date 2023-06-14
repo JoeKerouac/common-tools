@@ -74,18 +74,32 @@ public class IOUtils {
         byte[] buffer = new byte[bufferSize];
         int len;
         int index = 0;
+        boolean first = true;
         try {
             while ((len = inputStream.read(buffer, index, buffer.length - index)) > 0) {
                 index += len;
                 // buffer已经写满
                 if (index == buffer.length) {
-                    // 判断是否还有数据；PS: 这里这么判断的原因是因为外部可能精准的知道流中有多少数据，所以传入的buffer大小刚好，我们这里判断下就可以避免不必要的扩容
-                    int read = inputStream.read();
-                    if (read > 0) {
-                        // 还有数据，扩容buffer
-                        buffer = new byte[(int)Math.min(buffer.length * 3L / 2, Integer.MAX_VALUE)];
-                        buffer[index] = (byte)read;
-                        index += 1;
+                    int nextData = -1;
+
+                    if (first) {
+                        // 如果是第一次，则判断是否还有数据；PS: 这里这么判断的原因是因为外部可能精准的知道流中有多少数据，所以传入的buffer大小刚好，我们这里判断下就可以避免不必要的扩容
+                        nextData = inputStream.read();
+                        if (nextData < 0) {
+                            // 没有更多数据了，直接break出去
+                            break;
+                        }
+
+                        first = false;
+                    }
+
+                    // 不是第一次或者还有更多数据，我们扩容
+                    byte[] newBuffer = new byte[(int)Math.min(buffer.length * 3L / 2, Integer.MAX_VALUE)];
+                    System.arraycopy(buffer, 0, newBuffer, 0, index);
+                    buffer = newBuffer;
+
+                    if (nextData >= 0) {
+                        buffer[index++] = (byte)nextData;
                     }
                 }
             }
