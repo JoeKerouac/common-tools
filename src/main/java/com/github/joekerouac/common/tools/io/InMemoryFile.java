@@ -84,6 +84,10 @@ public class InMemoryFile {
         write(new byte[] {data}, 0, 1);
     }
 
+    public void write(byte[] d) throws IOException {
+        write(d, 0, d.length);
+    }
+
     public void write(byte[] d, int o, int l) throws IOException {
         if (d == null) {
             throw new NullPointerException();

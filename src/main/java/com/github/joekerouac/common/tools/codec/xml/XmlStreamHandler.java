@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 import org.xml.sax.Attributes;
@@ -67,11 +68,12 @@ public interface XmlStreamHandler {
      * {@link #endElement(String, String, String)}前调用，还可能在{@link #startElement(String, String, String, Attributes)}前
      * 调用或者在{@link #endElement(String, String, String)}后调用；
      *
-     * 注意：该方法必须在一个新线程中执行！！！
      * 
      * @param stream
-     *            数据输入流，无需关闭
+     *            数据输入流，读取完请关闭
+     * @throws IOException
+     *             IO异常
      */
-    void onData(InputStream stream);
+    void onData(InputStream stream) throws IOException;
 
 }

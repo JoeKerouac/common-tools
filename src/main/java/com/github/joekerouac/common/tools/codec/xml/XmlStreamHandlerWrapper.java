@@ -13,16 +13,14 @@
 package com.github.joekerouac.common.tools.codec.xml;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.charset.Charset;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
+
+import com.github.joekerouac.common.tools.io.InMemoryFile;
 
 /**
  * 将数据转为stream输出
@@ -33,19 +31,20 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class XmlStreamHandlerWrapper extends DefaultHandler {
 
-    private InputStream inputStream;
-
-    private OutputStream outputStream;
-
     private final XmlStreamHandler handler;
 
     private final int bufferSize;
 
+    private final int limit;
+
     private final Charset charset;
 
-    public XmlStreamHandlerWrapper(XmlStreamHandler handler, int bufferSize, Charset charset) {
+    private InMemoryFile memoryFile;
+
+    public XmlStreamHandlerWrapper(XmlStreamHandler handler, int bufferSize, int limit, Charset charset) {
         this.handler = handler;
         this.bufferSize = bufferSize;
+        this.limit = limit;
         this.charset = charset;
     }
 
@@ -58,8 +57,8 @@ public class XmlStreamHandlerWrapper extends DefaultHandler {
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
         closeStream();
 
-        newStream();
         handler.startElement(uri, localName, qName, attributes);
+        newStream();
     }
 
     @Override
@@ -72,11 +71,12 @@ public class XmlStreamHandlerWrapper extends DefaultHandler {
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
         byte[] bytes = new String(ch, start, length).getBytes(charset);
-        if (outputStream == null) {
+        if (memoryFile == null) {
             newStream();
         }
+
         try {
-            outputStream.write(bytes);
+            memoryFile.write(bytes);
         } catch (IOException e) {
             throw new SAXException(e);
         }
@@ -88,31 +88,23 @@ public class XmlStreamHandlerWrapper extends DefaultHandler {
     }
 
     private void closeStream() throws SAXException {
-        if (outputStream == null) {
+        if (memoryFile == null) {
             return;
         }
+
         try {
-            outputStream.close();
+            memoryFile.writeFinish();
+
+            handler.onData(memoryFile.getDataAsInputStream());
         } catch (IOException e) {
             throw new SAXException(e);
         }
-        outputStream = null;
-        inputStream = null;
+
+        memoryFile = null;
     }
 
-    private void newStream() throws SAXException {
-        PipedInputStream pipedInputStream = new PipedInputStream(bufferSize);
-        PipedOutputStream pipedOutputStream = new PipedOutputStream();
-        try {
-            pipedInputStream.connect(pipedOutputStream);
-        } catch (IOException e) {
-            // 理论上不可能
-            throw new SAXException(e);
-        }
-
-        inputStream = pipedInputStream;
-        outputStream = pipedOutputStream;
-        handler.onData(inputStream);
+    private void newStream() {
+        memoryFile = new InMemoryFile(bufferSize, limit);
     }
 
 }
