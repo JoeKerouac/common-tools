@@ -13,8 +13,13 @@
 package com.github.joekerouac.common.tools.reflect.type;
 
 import java.lang.reflect.Type;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.validation.constraints.NotNull;
 
 import lombok.Data;
+import lombok.ToString;
 
 /**
  * java类型表示
@@ -29,11 +34,39 @@ public class JavaType implements Type {
     /**
      * 类型名称，例如String（当该类型为泛型时该值为泛型名称，例如T，不是实际名称）
      */
+    @NotNull
     protected String name;
+
+    /**
+     * 实际类型，可能为空，为空时{@link #rawClass}肯定不为空
+     */
+    @ToString.Exclude
+    protected JavaType rawType;
 
     /**
      * 该类型的基本类型
      */
-    protected Class<?> rawClass;
+    private Class<?> rawClass;
+
+    public Class<?> getRawClass() {
+        return getRawClass(new HashSet<>());
+    }
+
+    private Class<?> getRawClass(Set<JavaType> set) {
+        if (rawClass != null) {
+            return rawClass;
+        }
+
+        if (rawType != null) {
+            if (set.contains(rawType)) {
+                return Object.class;
+            } else {
+                set.add(rawType);
+                return rawType.getRawClass(set);
+            }
+        }
+
+        return null;
+    }
 
 }

@@ -12,8 +12,8 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 /**
@@ -23,9 +23,9 @@ import lombok.ToString;
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
 @ToString(callSuper = true)
-@Data
 public class CustomGenericArrayType extends JavaType {
 
     /**

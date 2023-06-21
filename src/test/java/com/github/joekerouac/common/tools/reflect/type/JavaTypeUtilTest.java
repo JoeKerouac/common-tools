@@ -15,7 +15,10 @@ package com.github.joekerouac.common.tools.reflect.type;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -36,14 +39,6 @@ public class JavaTypeUtilTest {
     @Test
     public void testCreateJavaType() throws Exception {
         {
-            // 测试createBaseJavaType
-            BaseType baseType = new BaseType();
-            baseType.setType(Object.class);
-            baseType.setName(Object.class.getSimpleName());
-            Assert.assertEquals(JavaTypeUtil.createBaseType(Object.class), baseType);
-        }
-
-        {
             // 为了方便，将从TypeReference构建和从Type构建合并，使用同一个类型构建
             List<JavaType> list = new ArrayList<>();
             // 测试从TypeReference构建JavaType
@@ -59,20 +54,22 @@ public class JavaTypeUtilTest {
             Assert.assertEquals(list.get(0), list.get(1));
 
             for (JavaType javaType : list) {
-                Assert.assertTrue(javaType instanceof BaseType);
-                BaseType baseType = (BaseType)javaType;
-                Assert.assertEquals(baseType.getType(), Map.class);
-                Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 2);
-                Assert.assertTrue(baseType.getGenerics()[0] instanceof BaseType);
-                BaseType stringBaseType = (BaseType)baseType.getGenerics()[0];
-                Assert.assertEquals(stringBaseType.getType(), String.class);
-                Assert.assertEquals(CollectionUtil.size(stringBaseType.getGenerics()), 0);
-                Assert.assertTrue(baseType.getGenerics()[1] instanceof BaseType);
-                BaseType listBaseType = (BaseType)baseType.getGenerics()[1];
-                Assert.assertEquals(listBaseType.getType(), List.class);
-                Assert.assertEquals(CollectionUtil.size(listBaseType.getGenerics()), 1);
-                Assert.assertTrue(listBaseType.getGenerics()[0] instanceof BaseType);
-                Assert.assertEquals(((BaseType)listBaseType.getGenerics()[0]).getType(), String.class);
+                Assert.assertTrue(javaType instanceof SimpleType);
+                SimpleType simpleType = (SimpleType)javaType;
+                Assert.assertEquals(simpleType.getRawClass(), Map.class);
+                Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 2);
+
+                Assert.assertTrue(simpleType.getBindingList().get(0) instanceof SimpleType);
+                SimpleType stringBaseType = (SimpleType)simpleType.getBindingList().get(0);
+                Assert.assertEquals(stringBaseType.getRawClass(), String.class);
+                Assert.assertEquals(CollectionUtil.size(stringBaseType.getBindings()), 0);
+
+                Assert.assertTrue(simpleType.getBindingList().get(1) instanceof SimpleType);
+                SimpleType listBaseType = (SimpleType)simpleType.getBindingList().get(1);
+                Assert.assertEquals(listBaseType.getRawClass(), List.class);
+                Assert.assertEquals(CollectionUtil.size(listBaseType.getBindings()), 1);
+                Assert.assertTrue(listBaseType.getBindingList().get(0) instanceof SimpleType);
+                Assert.assertEquals(listBaseType.getBindingList().get(0).getRawClass(), String.class);
             }
         }
 
@@ -80,34 +77,34 @@ public class JavaTypeUtilTest {
             // 现在BaseJavaType验证通过，依靠该场景进行下一步验证
             // 先验证匿名泛型场景
             JavaType javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<? extends String>>() {});
-            GenericType genericType = (GenericType)((BaseType)javaType).getGenerics()[0];
+            GenericType genericType = (GenericType)((SimpleType)javaType).getBindingList().get(0);
             Assert.assertEquals(genericType.getName(), "?");
-            Assert.assertTrue(genericType.getParent() instanceof BaseType);
-            Assert.assertEquals(((BaseType)genericType.getParent()).getType(), String.class);
+            Assert.assertTrue(genericType.getParent() instanceof SimpleType);
+            Assert.assertEquals(((SimpleType)genericType.getParent()).getRawClass(), String.class);
 
             // 不指定parent，默认是Object的场景
             javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<?>>() {});
-            genericType = (GenericType)((BaseType)javaType).getGenerics()[0];
+            genericType = (GenericType)((SimpleType)javaType).getBindingList().get(0);
             Assert.assertEquals(genericType.getName(), "?");
-            Assert.assertTrue(genericType.getParent() instanceof BaseType);
-            Assert.assertEquals(((BaseType)genericType.getParent()).getType(), Object.class);
+            Assert.assertTrue(genericType.getParent() instanceof SimpleType);
+            Assert.assertEquals(((SimpleType)genericType.getParent()).getRawClass(), Object.class);
         }
 
         {
             // 验证有名字的泛型
             Field field = A.class.getDeclaredField("map");
             JavaType javaType = JavaTypeUtil.createJavaType(field.getGenericType());
-            Assert.assertTrue(javaType instanceof BaseType);
-            Assert.assertEquals(((BaseType)javaType).getType(), Map.class);
-            Assert.assertEquals(CollectionUtil.size(((BaseType)javaType).getGenerics()), 2);
-            Assert.assertTrue(((BaseType)javaType).getGenerics()[0] instanceof GenericType);
-            GenericType genericType0 = (GenericType)((BaseType)javaType).getGenerics()[0];
+            Assert.assertTrue(javaType instanceof SimpleType);
+            Assert.assertEquals(javaType.getRawClass(), Map.class);
+            Assert.assertEquals(CollectionUtil.size(((SimpleType)javaType).getBindings()), 2);
+            Assert.assertTrue(((SimpleType)javaType).getBindingList().get(0) instanceof GenericType);
+            GenericType genericType0 = (GenericType)((SimpleType)javaType).getBindingList().get(0);
             Assert.assertEquals(genericType0.getName(), "V");
-            Assert.assertEquals(((BaseType)genericType0.getParent()).getType(), Object.class);
-            Assert.assertTrue(((BaseType)javaType).getGenerics()[1] instanceof GenericType);
-            GenericType genericType1 = (GenericType)((BaseType)javaType).getGenerics()[1];
+            Assert.assertEquals(genericType0.getParent().getRawClass(), Object.class);
+            Assert.assertTrue(((SimpleType)javaType).getBindingList().get(1) instanceof GenericType);
+            GenericType genericType1 = (GenericType)((SimpleType)javaType).getBindingList().get(1);
             Assert.assertEquals(genericType1.getName(), "K");
-            Assert.assertEquals(((BaseType)genericType1.getParent()).getType(), Object.class);
+            Assert.assertEquals(genericType1.getParent().getRawClass(), Object.class);
         }
 
         {
@@ -117,14 +114,14 @@ public class JavaTypeUtilTest {
 
             Assert.assertTrue(javaType instanceof GenericType);
             Assert.assertEquals(javaType.getName(), "T");
-            Assert.assertTrue(((GenericType)javaType).getParent() instanceof BaseType);
-            BaseType baseType = (BaseType)((GenericType)javaType).getParent();
-            Assert.assertEquals(baseType.getType(), List.class);
-            Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 1);
-            Assert.assertTrue(baseType.getGenerics()[0] instanceof GenericType);
-            GenericType genericType = (GenericType)baseType.getGenerics()[0];
+            Assert.assertTrue(((GenericType)javaType).getParent() instanceof SimpleType);
+            SimpleType simpleType = (SimpleType) ((GenericType)javaType).getParent();
+            Assert.assertEquals(simpleType.getRawClass(), List.class);
+            Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 1);
+            Assert.assertTrue(simpleType.getBindingList().get(0) instanceof GenericType);
+            GenericType genericType = (GenericType)simpleType.getBindingList().get(0);
             // 递归依赖了，这里直接验证
-            Assert.assertEquals(genericType, javaType);
+            Assert.assertEquals(genericType.getRawClass(), javaType.getRawClass());
         }
 
         // 泛型数组场景不好构造，这里不单独验证，但是后边会有验证
@@ -138,12 +135,12 @@ public class JavaTypeUtilTest {
         Assert.assertTrue(list.get(0) instanceof GenericType);
         Assert.assertTrue(list.get(1) instanceof GenericType);
         Assert.assertEquals(list.get(0).getName(), "K");
-        Assert.assertTrue(((GenericType)list.get(0)).getParent() instanceof BaseType);
+        Assert.assertTrue(((GenericType)list.get(0)).getParent() instanceof SimpleType);
         Assert.assertEquals(list.get(1).getName(), "V");
-        Assert.assertTrue(((GenericType)list.get(1)).getParent() instanceof BaseType);
+        Assert.assertTrue(((GenericType)list.get(1)).getParent() instanceof SimpleType);
 
-        Assert.assertEquals(((BaseType)((GenericType)list.get(0)).getParent()).getType(), Object.class);
-        Assert.assertEquals(((BaseType)((GenericType)list.get(1)).getParent()).getType(), Object.class);
+        Assert.assertEquals(((GenericType)list.get(0)).getParent().getRawClass(), Object.class);
+        Assert.assertEquals(((GenericType)list.get(1)).getParent().getRawClass(), Object.class);
         list = JavaTypeUtil.getDeclareGenerics(C.class);
         Assert.assertTrue(list.isEmpty());
     }
@@ -167,241 +164,6 @@ public class JavaTypeUtilTest {
         javaType = list.get(2);
         expectType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<List<String>>>() {});
         Assert.assertEquals(javaType, expectType);
-    }
-
-    @Test
-    public void testGetGenericRegistry() throws Exception {
-        {
-            // 测试获取方法上的泛型注册表
-            Method method1 = this.getClass().getDeclaredMethod("method1", A.class);
-            Map<GenericDefinition, JavaType> registry = JavaTypeUtil.getGenericRegistry(method1);
-            Assert.assertEquals(registry.size(), 1);
-            // 虽然这里是for循环，但实际上集合里边只有一个
-            for (JavaType value : registry.values()) {
-                Assert.assertTrue(value instanceof BaseType);
-                BaseType baseType = (BaseType)value;
-                Assert.assertEquals(baseType.getType(), List.class);
-                Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 1);
-                Assert.assertTrue(baseType.getGenerics()[0] instanceof GenericType);
-                Assert.assertTrue(((GenericType)baseType.getGenerics()[0]).getParent() instanceof BaseType);
-
-                // method1的泛型递归了，这里验证下
-                Assert.assertEquals(baseType, ((GenericType)baseType.getGenerics()[0]).getParent());
-            }
-        }
-
-        {
-            // 测试获取类上的泛型注册表
-            Map<GenericDefinition, JavaType> registry =
-                JavaTypeUtil.getGenericRegistry(D.class, A.class, Collections.emptyMap());
-            Assert.assertEquals(registry.size(), 5);
-
-            {
-                // B上的泛型定义
-                // 实际类型
-                JavaType javaType = registry.get(new GenericDefinition("K", B.class));
-                // 目标类型
-                JavaType dstType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<String>>() {});
-                Assert.assertEquals(javaType, dstType);
-
-                // 实际类型
-                javaType = registry.get(new GenericDefinition("V", B.class));
-                // 目标类型
-                dstType = JavaTypeUtil.createJavaType(new AbstractTypeReference<Integer[]>() {});
-                Assert.assertEquals(javaType, dstType);
-
-                // 实际类型
-                javaType = registry.get(new GenericDefinition("F", B.class));
-                // 目标类型
-                dstType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<List<String>>>() {});
-                Assert.assertEquals(javaType, dstType);
-            }
-
-            {
-                // A上的泛型定义
-                JavaType javaType = registry.get(new GenericDefinition("K", A.class));
-                // 目标类型
-                JavaType dstType = JavaTypeUtil.createJavaType(new AbstractTypeReference<Integer[]>() {});
-                Assert.assertEquals(javaType, dstType);
-
-                // 实际类型
-                javaType = registry.get(new GenericDefinition("V", A.class));
-                // 注意，这个比较特殊，是一个泛型数组
-                Assert.assertTrue(javaType instanceof CustomGenericArrayType);
-                // 二维数组
-                Assert.assertEquals(((CustomGenericArrayType)javaType).getDimensions(), 2);
-
-                // 取出数组的componentType，数组componentType仍然有泛型
-                javaType = ((CustomGenericArrayType)javaType).getComponentType();
-
-                // 目标类型
-                dstType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<String>>() {});
-                Assert.assertEquals(javaType, dstType);
-            }
-        }
-    }
-
-    @Test
-    public void testGetRealType() throws Exception {
-        // 测试getRealType
-        {
-            // 基础测试
-            AbstractTypeReference<Map<String, List<String>>> reference =
-                new AbstractTypeReference<Map<String, List<String>>>() {};
-
-            JavaType javaType = JavaTypeUtil.createJavaType(reference.getType());
-            Assert.assertTrue(javaType instanceof BaseType);
-            BaseType baseType = (BaseType)javaType;
-            Assert.assertEquals(2, baseType.getGenerics().length);
-
-            JavaType realType1 = JavaTypeUtil.getRealType(baseType.getGenerics()[0]);
-            JavaType realType2 = JavaTypeUtil.getRealType(baseType.getGenerics()[1]);
-            Assert.assertTrue(realType1 instanceof BaseType);
-
-            Assert.assertEquals(String.class, ((BaseType)realType1).getType());
-
-            Assert.assertEquals(List.class, ((BaseType)realType2).getType());
-
-            Assert.assertEquals(1, ((BaseType)realType2).getGenerics().length);
-
-            JavaType realType3 = JavaTypeUtil.getRealType(((BaseType)realType2).getGenerics()[0]);
-            Assert.assertTrue(realType3 instanceof BaseType);
-            Assert.assertEquals(((BaseType)realType3).getType(), String.class);
-        }
-
-        {
-            // 使用泛型类型作为getRealType的入参
-            Method method2 = this.getClass().getDeclaredMethod("method2", A.class, A.class);
-            // 这里应该返回的类型是A<List<T>, T[]>
-            JavaType paramType = JavaTypeUtil.createJavaType(method2.getParameters()[0].getParameterizedType());
-
-            Assert.assertTrue(paramType instanceof BaseType);
-            BaseType baseType = (BaseType)paramType;
-            Assert.assertEquals(baseType.getType(), A.class);
-            Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 2);
-            Assert.assertTrue(baseType.getGenerics()[0] instanceof BaseType);
-            Assert.assertTrue(((BaseType)baseType.getGenerics()[0]).getGenerics()[0] instanceof GenericType);
-            Assert.assertTrue(baseType.getGenerics()[1] instanceof CustomGenericArrayType);
-
-            {
-                // 取出List<T>中的泛型
-                GenericType genericType = (GenericType)((BaseType)baseType.getGenerics()[0]).getGenerics()[0];
-                // 对于方法上的泛型，使不使用注册表对我们没有区别，因为方法上声明的泛型只有运行时才会更改，其他时候不会更改，与此不同的是
-                // 类上的字段，类上的泛型可以被子类改写，与此同时子类继承的该字段的泛型也将一同被改写
-
-                // 使用注册表
-                JavaType result0 = JavaTypeUtil.getRealType(genericType, JavaTypeUtil.getGenericRegistry(method2));
-                // 不使用注册表
-                JavaType result1 = JavaTypeUtil.getRealType(genericType);
-                List<JavaType> javaTypes = Arrays.asList(result0, result1);
-
-                for (JavaType javaType : javaTypes) {
-                    Assert.assertTrue(javaType instanceof BaseType);
-                    BaseType baseType1 = (BaseType)javaType;
-                    Assert.assertEquals(baseType1.getType(), List.class);
-                    Assert.assertEquals(CollectionUtil.size(baseType1.getGenerics()), 1);
-                    Assert.assertTrue(baseType1.getGenerics()[0] instanceof BaseType);
-                    Assert.assertEquals(((BaseType)baseType1.getGenerics()[0]).getType(), String.class);
-                    Assert.assertTrue(CollectionUtil.isEmpty(((BaseType)baseType1.getGenerics()[0]).getGenerics()));
-                }
-            }
-        }
-
-        {
-            // 使用匿名泛型类型作为getRealType的入参
-            Method method2 = this.getClass().getDeclaredMethod("method3", List.class);
-            // 这里应该返回的类型是List<?>
-            JavaType paramType = JavaTypeUtil.createJavaType(method2.getParameters()[0].getParameterizedType());
-            Assert.assertTrue(paramType instanceof BaseType);
-            Assert.assertTrue(((BaseType)paramType).getGenerics()[0] instanceof GenericType);
-            GenericType genericType = (GenericType)((BaseType)paramType).getGenerics()[0];
-            // 这里传一个空注册表，顺便验证下这个兜底
-            JavaType javaType = JavaTypeUtil.getRealType(genericType, Collections.emptyMap());
-            Assert.assertTrue(javaType instanceof BaseType);
-            Assert.assertEquals(((BaseType)javaType).getType(), Object.class);
-            Assert.assertTrue(CollectionUtil.isEmpty(((BaseType)javaType).getGenerics()));
-        }
-
-    }
-
-    @Test
-    public void testTypeResolve() throws Exception {
-        // 高级测试：方法入参使用方法上声明的泛型，这里用方法2而不是1，主要是为了好验证
-        Method method2 = this.getClass().getDeclaredMethod("method2", A.class, A.class);
-
-        {
-            // 方法第一个参数验证，指定了泛型
-            JavaType paramType = JavaTypeUtil.createJavaType(method2.getParameters()[0].getParameterizedType());
-            // 这里应该返回的类型是A<List<List<String>>, List<String>[]>
-            paramType = JavaTypeUtil.typeResolve(paramType, JavaTypeUtil.getGenericRegistry(method2));
-
-            Assert.assertTrue(paramType instanceof BaseType);
-            BaseType baseType = (BaseType)paramType;
-            Assert.assertEquals(baseType.getType(), A.class);
-            Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 2);
-            Assert.assertTrue(baseType.getGenerics()[0] instanceof BaseType);
-            Assert.assertTrue(baseType.getGenerics()[1] instanceof CustomGenericArrayType);
-
-            {
-                // A的第一个泛型验证，实际类型是List<List<String>>
-                BaseType listTType = (BaseType)baseType.getGenerics()[0];
-                Assert.assertEquals(listTType.getType(), List.class);
-                Assert.assertEquals(CollectionUtil.size(listTType.getGenerics()), 1);
-                Assert.assertTrue(listTType.getGenerics()[0] instanceof BaseType);
-                // 泛型T的类型
-                BaseType tType = (BaseType)listTType.getGenerics()[0];
-                Assert.assertEquals(tType.getType(), List.class);
-                Assert.assertEquals(CollectionUtil.size(tType.getGenerics()), 1);
-                Assert.assertTrue(tType.getGenerics()[0] instanceof BaseType);
-                BaseType stringType = (BaseType)tType.getGenerics()[0];
-                Assert.assertEquals(stringType.getType(), String.class);
-                Assert.assertTrue(CollectionUtil.isEmpty(stringType.getGenerics()));
-            }
-
-            {
-                // A的第二个泛型验证，实际类型是List<String>[]
-                CustomGenericArrayType arrayType = (CustomGenericArrayType)baseType.getGenerics()[1];
-                Assert.assertEquals(arrayType.getDimensions(), 1);
-                Assert.assertTrue(arrayType.getComponentType() instanceof BaseType);
-                BaseType arrComponentType = (BaseType)arrayType.getComponentType();
-                Assert.assertEquals(arrComponentType.getType(), List.class);
-                Assert.assertEquals(CollectionUtil.size(arrComponentType.getGenerics()), 1);
-                Assert.assertTrue(arrComponentType.getGenerics()[0] instanceof BaseType);
-                BaseType stringType = (BaseType)arrComponentType.getGenerics()[0];
-                Assert.assertTrue(CollectionUtil.isEmpty(stringType.getGenerics()));
-                Assert.assertEquals(stringType.getType(), String.class);
-            }
-        }
-
-        {
-            // 方法第二个参数验证，没有指定泛型
-            // 方法第一个参数验证，指定了泛型
-            JavaType paramType = JavaTypeUtil.createJavaType(method2.getParameters()[1].getParameterizedType());
-            // 这里应该返回的类型是A<List<Object>, Object>
-            paramType = JavaTypeUtil.typeResolve(paramType, JavaTypeUtil.getGenericRegistry(method2));
-
-            Assert.assertTrue(paramType instanceof BaseType);
-            BaseType baseType = (BaseType)paramType;
-            Assert.assertEquals(baseType.getType(), A.class);
-            Assert.assertEquals(CollectionUtil.size(baseType.getGenerics()), 2);
-            Assert.assertTrue(baseType.getGenerics()[0] instanceof BaseType);
-            Assert.assertTrue(baseType.getGenerics()[1] instanceof BaseType);
-
-            {
-                // A的第一个泛型验证，实际类型是List<String>[]
-                BaseType type = (BaseType)baseType.getGenerics()[0];
-                Assert.assertEquals(type.getType(), Object.class);
-                Assert.assertEquals(CollectionUtil.size(type.getGenerics()), 0);
-            }
-
-            {
-                // A的第二个泛型验证，实际类型是List<String>[]
-                BaseType type = (BaseType)baseType.getGenerics()[1];
-                Assert.assertEquals(type.getType(), Object.class);
-                Assert.assertEquals(CollectionUtil.size(type.getGenerics()), 0);
-            }
-        }
-
     }
 
     @Test(dataProvider = "signToClass")

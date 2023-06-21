@@ -95,7 +95,6 @@ public class JavaTypeUtil {
         return createJavaType(type, new LinkedHashMap<>());
     }
 
-
     /**
      * 根据java系统类型得出自定义类型
      *
@@ -136,7 +135,7 @@ public class JavaTypeUtil {
                 genericType.setParent(rawType);
             }
 
-            genericType.setRawClass(rawType.getRawClass());
+            genericType.setRawType(rawType);
             javaType = genericType;
         } else if (type instanceof TypeVariable) {
             // 该类型是名字确定的泛型，例如T等，需要先声明后使用，区别于WildcardType，WildcardType类型的泛型不需要声明可以直接使用；
@@ -158,7 +157,7 @@ public class JavaTypeUtil {
                 rawType = createJavaType(typeVariableImpl.getBounds()[0], context);
             }
             genericType.setParent(rawType);
-            genericType.setRawClass(rawType.getRawClass() == null ? Object.class : rawType.getRawClass());
+            genericType.setRawType(rawType);
             javaType = genericType;
         } else if (type instanceof ParameterizedType) {
             // 该类型存在泛型
@@ -181,7 +180,7 @@ public class JavaTypeUtil {
 
             SimpleType simpleType = new SimpleType();
             simpleType.setName(typeName);
-            simpleType.setRawClass(rawType.getRawClass());
+            simpleType.setRawType(rawType);
             simpleType.setBindings(currentBindings);
             simpleType.setBindingList(new ArrayList<>(currentBindings.values()));
             javaType = simpleType;
