@@ -12,10 +12,8 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
-import java.lang.reflect.GenericDeclaration;
-
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 /**
@@ -25,9 +23,9 @@ import lombok.ToString;
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  */
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
 @ToString(callSuper = true)
-@Data
 public class GenericType extends JavaType {
 
     /**
@@ -35,15 +33,13 @@ public class GenericType extends JavaType {
      * 
      * 注意，如果用户既没有指定T extends，也没有指定T super，那么默认是T extends Object
      */
+    @ToString.Exclude
     private JavaType parent;
 
     /**
      * 该类型的子类型，当泛型为（T super JavaType）这种形式时存在该值
      */
+    @ToString.Exclude
     private JavaType child;
 
-    /**
-     * 该泛型声明的位置，如果泛型不是匿名的（?这种形式的泛型），那么该参数是必须的；
-     */
-    private GenericDeclaration genericDeclaration;
 }
