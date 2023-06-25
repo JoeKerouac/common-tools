@@ -35,6 +35,7 @@ import com.github.joekerouac.common.tools.util.JsonUtil;
 
 import lombok.CustomLog;
 import lombok.Data;
+import lombok.Getter;
 
 /**
  * HTTP响应，如果不使用必须关闭，如果调用过getresult方法可以不关闭
@@ -81,6 +82,7 @@ public class IHttpResponse {
     /**
      * 数据长度
      */
+    @Getter
     private final int len;
 
     /**
@@ -206,6 +208,10 @@ public class IHttpResponse {
      *             IOException
      */
     public InputStream getResultAsStream() throws IOException {
+        if (exception != null) {
+            throw exception;
+        }
+
         if (data == null) {
             return stream;
         } else {

@@ -62,12 +62,6 @@ public class JavaType implements Type {
     @ToString.Exclude
     protected LinkedHashMap<String, JavaType> bindings;
 
-    /**
-     * {@link #bindings}.values()
-     */
-    @ToString.Exclude
-    protected List<JavaType> bindingList;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {

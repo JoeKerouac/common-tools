@@ -19,7 +19,6 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -88,6 +87,20 @@ public class JavaTypeUtil {
     /**
      * 根据java系统类型得出自定义类型
      *
+     * @param reference
+     *            TypeReference
+     * @param bindings
+     *            bindings
+     * @return 自定义java类型说明
+     */
+    public static JavaType createJavaType(AbstractTypeReference<?> reference,
+        LinkedHashMap<String, JavaType> bindings) {
+        return createJavaType(reference.getType(), bindings);
+    }
+
+    /**
+     * 根据java系统类型得出自定义类型
+     *
      * @param type
      *            java反射取得的类型
      * @return 自定义java类型说明
@@ -125,7 +138,6 @@ public class JavaTypeUtil {
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
             genericType.setBindings(new LinkedHashMap<>());
-            genericType.setBindingList(new ArrayList<>());
 
             // child和parent不可能都为空，如果用户是使用的一个单泛型T或者?，没有明确指出他的父类或者子类，例如T extends String、
             // T super String，那么就会有一个默认的parent，值是Object
@@ -147,7 +159,6 @@ public class JavaTypeUtil {
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
             genericType.setBindings(new LinkedHashMap<>());
-            genericType.setBindingList(new ArrayList<>());
 
             // 先从上下文获取，获取不到再构建
             JavaType rawType = context.get(typeName);
@@ -187,7 +198,6 @@ public class JavaTypeUtil {
             simpleType.setName(typeName);
             simpleType.setRawType(rawType);
             simpleType.setBindings(currentBindings);
-            simpleType.setBindingList(new ArrayList<>(currentBindings.values()));
             javaType = simpleType;
         } else if (type instanceof GenericArrayType) {
             GenericArrayType genericArrayType = (GenericArrayType)type;
@@ -210,7 +220,6 @@ public class JavaTypeUtil {
                 simpleType.setName(clazz.getName());
                 simpleType.setRawClass(clazz);
                 simpleType.setBindings(currentBindings);
-                simpleType.setBindingList(new ArrayList<>(currentBindings.values()));
 
                 javaType = simpleType;
             }
@@ -278,7 +287,6 @@ public class JavaTypeUtil {
         arrayDesc.setRawClass(Array.newInstance(componentType.getRawClass(), now).getClass());
         arrayDesc.setDimensions(now);
         arrayDesc.setBindings(bindings);
-        arrayDesc.setBindingList(new ArrayList<>(bindings.values()));
         return arrayDesc;
     }
 

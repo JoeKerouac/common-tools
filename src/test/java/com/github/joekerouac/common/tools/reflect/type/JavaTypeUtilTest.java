@@ -59,17 +59,18 @@ public class JavaTypeUtilTest {
                 Assert.assertEquals(simpleType.getRawClass(), Map.class);
                 Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 2);
 
-                Assert.assertTrue(simpleType.getBindingList().get(0) instanceof SimpleType);
-                SimpleType stringBaseType = (SimpleType)simpleType.getBindingList().get(0);
+                Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(0) instanceof SimpleType);
+                SimpleType stringBaseType = (SimpleType)new ArrayList<>(simpleType.getBindings().values()).get(0);
                 Assert.assertEquals(stringBaseType.getRawClass(), String.class);
                 Assert.assertEquals(CollectionUtil.size(stringBaseType.getBindings()), 0);
 
-                Assert.assertTrue(simpleType.getBindingList().get(1) instanceof SimpleType);
-                SimpleType listBaseType = (SimpleType)simpleType.getBindingList().get(1);
+                Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(1) instanceof SimpleType);
+                SimpleType listBaseType = (SimpleType)new ArrayList<>(simpleType.getBindings().values()).get(1);
                 Assert.assertEquals(listBaseType.getRawClass(), List.class);
                 Assert.assertEquals(CollectionUtil.size(listBaseType.getBindings()), 1);
-                Assert.assertTrue(listBaseType.getBindingList().get(0) instanceof SimpleType);
-                Assert.assertEquals(listBaseType.getBindingList().get(0).getRawClass(), String.class);
+                Assert.assertTrue(new ArrayList<>(listBaseType.getBindings().values()).get(0) instanceof SimpleType);
+                Assert.assertEquals(new ArrayList<>(listBaseType.getBindings().values()).get(0).getRawClass(),
+                    String.class);
             }
         }
 
@@ -77,17 +78,17 @@ public class JavaTypeUtilTest {
             // 现在BaseJavaType验证通过，依靠该场景进行下一步验证
             // 先验证匿名泛型场景
             JavaType javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<? extends String>>() {});
-            GenericType genericType = (GenericType)((SimpleType)javaType).getBindingList().get(0);
+            GenericType genericType = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(0);
             Assert.assertEquals(genericType.getName(), "?");
             Assert.assertTrue(genericType.getParent() instanceof SimpleType);
-            Assert.assertEquals(((SimpleType)genericType.getParent()).getRawClass(), String.class);
+            Assert.assertEquals(genericType.getParent().getRawClass(), String.class);
 
             // 不指定parent，默认是Object的场景
             javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<?>>() {});
-            genericType = (GenericType)((SimpleType)javaType).getBindingList().get(0);
+            genericType = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(0);
             Assert.assertEquals(genericType.getName(), "?");
             Assert.assertTrue(genericType.getParent() instanceof SimpleType);
-            Assert.assertEquals(((SimpleType)genericType.getParent()).getRawClass(), Object.class);
+            Assert.assertEquals(genericType.getParent().getRawClass(), Object.class);
         }
 
         {
@@ -96,13 +97,13 @@ public class JavaTypeUtilTest {
             JavaType javaType = JavaTypeUtil.createJavaType(field.getGenericType());
             Assert.assertTrue(javaType instanceof SimpleType);
             Assert.assertEquals(javaType.getRawClass(), Map.class);
-            Assert.assertEquals(CollectionUtil.size(((SimpleType)javaType).getBindings()), 2);
-            Assert.assertTrue(((SimpleType)javaType).getBindingList().get(0) instanceof GenericType);
-            GenericType genericType0 = (GenericType)((SimpleType)javaType).getBindingList().get(0);
+            Assert.assertEquals(CollectionUtil.size(javaType.getBindings()), 2);
+            Assert.assertTrue(new ArrayList<>(javaType.getBindings().values()).get(0) instanceof GenericType);
+            GenericType genericType0 = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(0);
             Assert.assertEquals(genericType0.getName(), "V");
             Assert.assertEquals(genericType0.getParent().getRawClass(), Object.class);
-            Assert.assertTrue(((SimpleType)javaType).getBindingList().get(1) instanceof GenericType);
-            GenericType genericType1 = (GenericType)((SimpleType)javaType).getBindingList().get(1);
+            Assert.assertTrue(new ArrayList<>(javaType.getBindings().values()).get(1) instanceof GenericType);
+            GenericType genericType1 = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(1);
             Assert.assertEquals(genericType1.getName(), "K");
             Assert.assertEquals(genericType1.getParent().getRawClass(), Object.class);
         }
@@ -111,7 +112,6 @@ public class JavaTypeUtilTest {
             // 验证类型包含泛型的，并且是循环包含的场景，即 T extends List<T>这种
             Method method = this.getClass().getDeclaredMethod("method1", A.class);
             JavaType javaType = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
-            JavaType javaType1 = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
 
             Assert.assertTrue(javaType instanceof GenericType);
             Assert.assertEquals(javaType.getName(), "T");
@@ -119,8 +119,8 @@ public class JavaTypeUtilTest {
             SimpleType simpleType = (SimpleType)((GenericType)javaType).getParent();
             Assert.assertEquals(simpleType.getRawClass(), List.class);
             Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 1);
-            Assert.assertTrue(simpleType.getBindingList().get(0) instanceof GenericType);
-            GenericType genericType = (GenericType)simpleType.getBindingList().get(0);
+            Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(0) instanceof GenericType);
+            JavaType javaType1 = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
             // 递归依赖了，这里直接验证
             Assert.assertEquals(javaType1, javaType);
         }
