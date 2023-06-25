@@ -14,6 +14,7 @@ package com.github.joekerouac.common.tools.codec.xml;
 
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.reflect.bean.BeanUtils;
 import com.github.joekerouac.common.tools.reflect.bean.PropertyEditor;
 import com.github.joekerouac.common.tools.reflect.type.AbstractTypeReference;
+import com.github.joekerouac.common.tools.reflect.type.JavaType;
 import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
@@ -54,9 +56,10 @@ import lombok.CustomLog;
 import lombok.Data;
 
 /**
- * dom4j实现的xml解析器
+ * dom4j实现的xml解析器，目前支持类的泛型解析，但是不支持Map、List的泛型解析；
  *
- * 注意：非线程安全，同时可能会有内存问题；
+ *
+ * 注意：非线程安全，同时可能会有内存问题，大xml请使用流式解析；
  *
  * @since 1.0.0
  * @author JoeKerouac
@@ -69,7 +72,7 @@ public class Dom4JXmlCodec implements Codec {
 
     protected final SAXReader reader;
 
-    private final Map<Class<?>, XmlDeserializer<?>> deserializers;
+    private final Map<JavaType, XmlDeserializer<?>> deserializers;
 
     private final boolean writeHeader;
 
@@ -87,7 +90,17 @@ public class Dom4JXmlCodec implements Codec {
 
     @SuppressWarnings("unchecked")
     public <T> XmlDeserializer<T> addDeserializer(Class<T> type, XmlDeserializer<T> deserializer) {
-        return (XmlDeserializer<T>)deserializers.put(type, deserializer);
+        return (XmlDeserializer<T>)deserializers.put(JavaTypeUtil.createJavaType(type), deserializer);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> XmlDeserializer<T> addDeserializer(AbstractTypeReference<T> reference, XmlDeserializer<T> deserializer) {
+        return (XmlDeserializer<T>)deserializers.put(JavaTypeUtil.createJavaType(reference), deserializer);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> XmlDeserializer<T> addDeserializer(JavaType javaType, XmlDeserializer<T> deserializer) {
+        return (XmlDeserializer<T>)deserializers.put(javaType, deserializer);
     }
 
     /**
@@ -246,26 +259,29 @@ public class Dom4JXmlCodec implements Codec {
      *
      * @param xml
      *            XML源
-     * @param clazz
-     *            POJO对象的class
+     * @param reference
+     *            POJO对象的类型
      * @param <T>
      *            POJO的实际类型
      * @return 解析结果
      */
     @SuppressWarnings("unchecked")
-    public <T> T parse(String xml, Class<T> clazz) {
+    private <T> T parse(String xml, AbstractTypeReference<T> reference) {
         Assert.argNotBlank(xml, "xml");
-        Assert.argNotNull(clazz, "clazz");
+        Assert.argNotNull(reference, "clazz");
 
         if (StringUtils.isBlank(xml)) {
             return null;
         }
 
-        if (Map.class.isAssignableFrom(clazz)) {
-            return (T)parseToMap(xml, clazz);
-        } else if (clazz.getName().startsWith("java.")) {
+        JavaType javaType = JavaTypeUtil.createJavaType(reference);
+        Class<?> rawClass = javaType.getRawClass();
+
+        if (Map.class.isAssignableFrom(rawClass)) {
+            return (T)parseToMap(xml, rawClass);
+        } else if (rawClass.getName().startsWith("java.")) {
             // 对java内置对象不支持，其实该解析器仅支持自定义pojo类，其他对象都不支持，不过java内置对象排除成本最低，所以先排除
-            throw new CommonException(ErrorCodeEnum.CODE_ERROR, StringUtils.format("不支持的类型:[{}]", clazz));
+            throw new CommonException(ErrorCodeEnum.CODE_ERROR, StringUtils.format("不支持的类型:[{}]", rawClass));
         }
 
         Document document;
@@ -284,12 +300,13 @@ public class Dom4JXmlCodec implements Codec {
             return null;
         }
 
-        XmlDeserializer<T> xmlDeserializer = (XmlDeserializer<T>)deserializers.compute(clazz, (key, deserializer) -> {
-            if (deserializer == null) {
-                deserializer = new BeanDeserializer<>(clazz, deserializers);
-            }
-            return deserializer;
-        });
+        XmlDeserializer<T> xmlDeserializer =
+            (XmlDeserializer<T>)deserializers.compute(javaType, (key, deserializer) -> {
+                if (deserializer == null) {
+                    deserializer = new BeanDeserializer<>(key, deserializers);
+                }
+                return deserializer;
+            });
 
         return xmlDeserializer.read(root, null);
     }
@@ -617,12 +634,18 @@ public class Dom4JXmlCodec implements Codec {
 
     @Override
     public <T> T read(byte[] data, Charset charset, Class<T> type) throws SerializeException {
-        return parse(new String(data, charset == null ? StandardCharsets.UTF_8 : charset), type);
+        return parse(new String(data, charset == null ? StandardCharsets.UTF_8 : charset),
+            new AbstractTypeReference<T>() {
+                @Override
+                public Type getType() {
+                    return type;
+                }
+            });
     }
 
     @Override
     public <T> T read(byte[] data, Charset charset, AbstractTypeReference<T> typeReference) throws SerializeException {
-        throw new CommonException(ErrorCodeEnum.CODE_ERROR, "不支持的方法");
+        return parse(new String(data, charset), typeReference);
     }
 
     @Override

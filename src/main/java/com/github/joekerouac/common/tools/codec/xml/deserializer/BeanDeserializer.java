@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +36,8 @@ import com.github.joekerouac.common.tools.reflect.AccessorUtil;
 import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.reflect.bean.BeanUtils;
 import com.github.joekerouac.common.tools.reflect.bean.PropertyEditor;
+import com.github.joekerouac.common.tools.reflect.type.JavaType;
+import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
 
@@ -50,19 +53,19 @@ import lombok.CustomLog;
 @CustomLog
 public class BeanDeserializer<T> implements XmlDeserializer<T> {
 
-    private final Class<T> type;
+    private final JavaType javaType;
 
-    private final Map<Class<?>, XmlDeserializer<?>> parentDeserializers;
+    private final Map<JavaType, XmlDeserializer<?>> parentDeserializers;
 
     private final Map<PropertyEditor, XmlDeserializer<?>> localDeserializers;
 
     private final PropertyEditor[] propertyEditors;
 
-    public BeanDeserializer(Class<T> type, Map<Class<?>, XmlDeserializer<?>> parentDeserializers) {
-        this.type = type;
+    public BeanDeserializer(JavaType javaType, Map<JavaType, XmlDeserializer<?>> parentDeserializers) {
+        this.javaType = javaType;
         this.parentDeserializers = parentDeserializers;
         this.localDeserializers = new ConcurrentHashMap<>();
-        this.propertyEditors = BeanUtils.getPropertyDescriptors(type);
+        this.propertyEditors = BeanUtils.getPropertyDescriptors(javaType.getRawClass());
     }
 
     @SuppressWarnings("unchecked")
@@ -74,7 +77,7 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
         // 获取pojo对象的实例
         try {
             // 没有权限访问该类或者该类（为接口、抽象类）不能实例化时将抛出异常
-            pojo = ClassUtils.getInstance(type);
+            pojo = (T)ClassUtils.getInstance(javaType.getRawClass());
         } catch (Exception e) {
             LOGGER.error(e, "class对象生成失败，请检查代码；失败原因：");
             throw new RuntimeException(e);
@@ -87,6 +90,9 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
         for (PropertyEditor editor : propertyEditors) {
             XmlNode xmlNode = editor.getAnnotation(XmlNode.class);
             final String fieldName = editor.name();
+            LinkedHashMap<String, JavaType> bindings = javaType.getBindings();
+            JavaType javaType = JavaTypeUtil.createJavaType(editor.getGenericType(), bindings);
+
             // 节点名
             String nodeName = null;
             // 属性名
@@ -108,7 +114,7 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
                     // 如果节点是属性值，那么需要同时设置节点名和属性名，原则上如果是属性的话必须设置节点名，但是为了防止
                     // 用户忘记设置，在用户没有设置的时候使用字段名
                     if (StringUtils.isBlank(xmlNode.attributeName())) {
-                        LOGGER.debug("字段[{}]是属性值，但是未设置属性名（attributeName字段），将采用字段名作为属性名", editor.name());
+                        LOGGER.debug("字段[{}]是属性值，但是未设置属性名（attributeName字段），将采用字段名作为属性名", fieldName);
                         attributeName = fieldName;
                     } else {
                         attributeName = xmlNode.attributeName();
@@ -120,10 +126,10 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
                     }
 
                     // 如果还是map类型，那么特殊处理一波，判断是否是存储属性集合的，如果是，则将所有属性都放入
-                    if (Map.class.isAssignableFrom(editor.type())) {
+                    if (Map.class.isAssignableFrom(javaType.getRawClass())) {
                         if (hasMapAttr) {
                             throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, StringUtils.format(
-                                "当前字段[{}]是map类型的属性字段，当前已经有一个map类型的属性字段[{}]了，不能出现两个", editor.name(), mapEditor.name()));
+                                "当前字段[{}]是map类型的属性字段，当前已经有一个map类型的属性字段[{}]了，不能出现两个", fieldName, mapEditor.name()));
                         } else {
                             hasMapAttr = true;
                             mapEditor = editor;
@@ -151,7 +157,7 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
                 }
                 if (!nodes.isEmpty()) {
                     // 如果还不为空，那么为pojo赋值
-                    Class<?> type = editor.type();
+                    Class<?> type = javaType.getRawClass();
 
                     // 开始赋值
                     // 判断字段是否是集合
@@ -391,13 +397,14 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
      */
     @SuppressWarnings("unchecked")
     private <D extends XmlDeserializer<?>> D resolve(PropertyEditor editor) {
-        Class<?> type = editor.type();
-        D deserializer = (D)parentDeserializers.get(type);
+        JavaType fieldType = JavaTypeUtil.createJavaType(editor.getGenericType(), this.javaType.getBindings());
+
+        D deserializer = (D)parentDeserializers.get(fieldType);
         if (deserializer != null) {
             return deserializer;
         }
 
-        if (Collection.class.isAssignableFrom(type)) {
+        if (Collection.class.isAssignableFrom(fieldType.getRawClass())) {
             // 到这里的只有两种可能，一、用户没有指定Deserializer；二、用户没有加注解XmlNode
             XmlNode xmlnode = editor.getAnnotation(XmlNode.class);
             if (xmlnode == null) {
@@ -405,10 +412,11 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
                 deserializer = (D)Deserializers.DEFAULT_DESERIALIZER;
             } else {
                 // 用户指定了xmlnode注解但是没有指定Deserializer，使用general字段确定集合中的数据类型
-                deserializer = (D)new BeanDeserializer<>(xmlnode.general(), parentDeserializers);
+                deserializer =
+                    (D)new BeanDeserializer<>(JavaTypeUtil.createJavaType(xmlnode.general()), parentDeserializers);
             }
         } else {
-            deserializer = (D)new BeanDeserializer<>(editor.type(), parentDeserializers);
+            deserializer = (D)new BeanDeserializer<>(fieldType, parentDeserializers);
         }
 
         return deserializer;

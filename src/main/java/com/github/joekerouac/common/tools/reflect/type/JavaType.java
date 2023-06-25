@@ -13,10 +13,18 @@
 package com.github.joekerouac.common.tools.reflect.type;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.validation.constraints.NotNull;
+
+import com.github.joekerouac.common.tools.collection.CollectionUtil;
 
 import lombok.Data;
 import lombok.ToString;
@@ -46,7 +54,140 @@ public class JavaType implements Type {
     /**
      * 该类型的基本类型
      */
-    private Class<?> rawClass;
+    protected Class<?> rawClass;
+
+    /**
+     * 该类型声明的泛型
+     */
+    @ToString.Exclude
+    protected LinkedHashMap<String, JavaType> bindings;
+
+    /**
+     * {@link #bindings}.values()
+     */
+    @ToString.Exclude
+    protected List<JavaType> bindingList;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        JavaType javaType = (JavaType)o;
+        return equals(javaType, new HashMap<>(), new HashMap<>());
+    }
+
+    protected boolean equals(JavaType javaType, Map<Integer, List<JavaType>> contains,
+        Map<Integer, List<JavaType>> targetContains) {
+        if (javaType == null) {
+            return false;
+        }
+
+        if (!Objects.equals(name, javaType.name)) {
+            return false;
+        }
+
+        // 先确定rawClass，后比较
+        getRawClass();
+        javaType.getRawClass();
+
+        if ((rawClass == null) ^ (javaType.rawClass == null)) {
+            return false;
+        }
+
+        if (rawClass != null && !rawClass.equals(javaType.rawClass)) {
+            return false;
+        }
+
+        int hash = this.hashCode();
+        boolean recursion = false;
+        List<JavaType> javaTypes = contains.get(hash);
+        if (javaTypes != null) {
+            for (JavaType type : javaTypes) {
+                if (type == this) {
+                    // 递归了
+                    recursion = true;
+                    break;
+                }
+            }
+        }
+
+        boolean targetRecursion = false;
+        javaTypes = targetContains.get(hash);
+        if (javaTypes != null) {
+            for (JavaType type : javaTypes) {
+                if (type == javaType) {
+                    // 同样递归了
+                    targetRecursion = true;
+                    break;
+                }
+            }
+        }
+
+        if (targetRecursion != recursion) {
+            return false;
+        }
+
+        if (recursion) {
+            return true;
+        }
+
+        putCache(this, hash, contains);
+        putCache(javaType, hash, targetContains);
+
+        if (rawType == null ^ javaType.rawType == null) {
+            return false;
+        }
+
+        if (rawType != null && !rawType.equals(javaType.rawType, contains, targetContains)) {
+            return false;
+        }
+
+        int bindingsSize;
+        if ((bindingsSize = CollectionUtil.size(bindings)) != CollectionUtil.size(javaType.bindings)) {
+            return false;
+        }
+
+        if (bindingsSize > 0) {
+            for (Map.Entry<String, JavaType> entry : bindings.entrySet()) {
+                String key = entry.getKey();
+                JavaType value = entry.getValue();
+                JavaType binding = javaType.bindings.get(key);
+
+                if (value == null ^ binding == null) {
+                    return false;
+                }
+
+                if (value == null) {
+                    continue;
+                }
+
+                if (!value.equals(binding, contains, targetContains)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, rawClass);
+    }
+
+    private void putCache(JavaType javaType, int hash, Map<Integer, List<JavaType>> cache) {
+        cache.compute(hash, (key, list) -> {
+            if (list == null) {
+                list = new ArrayList<>();
+            }
+            list.add(javaType);
+            return list;
+        });
+    }
 
     public Class<?> getRawClass() {
         return getRawClass(new HashSet<>());
@@ -59,14 +200,19 @@ public class JavaType implements Type {
 
         if (rawType != null) {
             if (set.contains(rawType)) {
-                return Object.class;
+                rawClass = Object.class;
             } else {
                 set.add(rawType);
-                return rawType.getRawClass(set);
+                rawClass = rawType.getRawClass(set);
             }
         }
 
-        return null;
+        if (rawClass != null) {
+            return rawClass;
+        }
+
+        // 理论上不会到这里
+        throw new RuntimeException("未知异常");
     }
 
 }

@@ -19,8 +19,11 @@ import java.time.LocalTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.github.joekerouac.common.tools.codec.xml.XmlDeserializer;
+import com.github.joekerouac.common.tools.reflect.type.JavaType;
+import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
 
 /**
  * @author JoeKerouac
@@ -31,7 +34,7 @@ public class Deserializers {
 
     public static final XmlDeserializer<?> DEFAULT_DESERIALIZER = new StringDeserializer();
 
-    public static final Map<Class<?>, XmlDeserializer<?>> defaultDeserializers;
+    public static final Map<JavaType, XmlDeserializer<?>> defaultDeserializers;
 
     static {
         Map<Class<?>, XmlDeserializer<?>> deserializers = new ConcurrentHashMap<>();
@@ -57,7 +60,9 @@ public class Deserializers {
         deserializers.put(LocalDateTime.class, LocalDateTimeDeserializer.INSTANCE);
         deserializers.put(LocalDate.class, LocalDateDeserializer.INSTANCE);
         deserializers.put(LocalTime.class, LocalTimeDeserializer.INSTANCE);
-        defaultDeserializers = Collections.unmodifiableMap(deserializers);
+
+        defaultDeserializers = Collections.unmodifiableMap(deserializers.entrySet().stream()
+            .collect(Collectors.toMap(e -> JavaTypeUtil.createJavaType(e.getKey()), Map.Entry::getValue)));
     }
 
 }

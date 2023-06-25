@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -104,7 +105,7 @@ public class JavaTypeUtil {
      *            bindings
      * @return 自定义java类型说明
      */
-    private static JavaType createJavaType(Type type, LinkedHashMap<String, JavaType> bindings) {
+    public static JavaType createJavaType(Type type, LinkedHashMap<String, JavaType> bindings) {
         // type的来源：1、从方法参数上获取；2、从字段上获取；3、从类上获取；4、从继承上获取
         if (type instanceof JavaType) {
             return (JavaType)type;
@@ -123,6 +124,8 @@ public class JavaTypeUtil {
             Type[] parent = wildcardTypeImpl.getUpperBounds();
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
+            genericType.setBindings(new LinkedHashMap<>());
+            genericType.setBindingList(new ArrayList<>());
 
             // child和parent不可能都为空，如果用户是使用的一个单泛型T或者?，没有明确指出他的父类或者子类，例如T extends String、
             // T super String，那么就会有一个默认的parent，值是Object
@@ -143,6 +146,8 @@ public class JavaTypeUtil {
 
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
+            genericType.setBindings(new LinkedHashMap<>());
+            genericType.setBindingList(new ArrayList<>());
 
             // 先从上下文获取，获取不到再构建
             JavaType rawType = context.get(typeName);
@@ -265,10 +270,29 @@ public class JavaTypeUtil {
             return getArrayDesc(((GenericArrayType)type).getGenericComponentType(), now + 1, resolved);
         }
 
+        JavaType componentType = createJavaType(type, resolved);
+        LinkedHashMap<String, JavaType> bindings = getBindings(componentType);
         CustomGenericArrayType arrayDesc = new CustomGenericArrayType();
-        arrayDesc.setComponentType(createJavaType(type, resolved));
+        arrayDesc.setName(type.getTypeName());
+        arrayDesc.setComponentType(componentType);
+        arrayDesc.setRawClass(Array.newInstance(componentType.getRawClass(), now).getClass());
         arrayDesc.setDimensions(now);
+        arrayDesc.setBindings(bindings);
+        arrayDesc.setBindingList(new ArrayList<>(bindings.values()));
         return arrayDesc;
+    }
+
+    private static LinkedHashMap<String, JavaType> getBindings(JavaType javaType) {
+        if (javaType instanceof SimpleType) {
+            return javaType.getBindings();
+        } else if (javaType instanceof CustomGenericArrayType) {
+            return getBindings(((CustomGenericArrayType)javaType).getComponentType());
+        } else if (javaType instanceof GenericType) {
+            return new LinkedHashMap<>();
+        } else {
+            throw new UnsupportedOperationException(
+                StringUtils.format("不支持的操作类型: [{}]", javaType == null ? null : javaType.getClass()));
+        }
     }
 
     /**

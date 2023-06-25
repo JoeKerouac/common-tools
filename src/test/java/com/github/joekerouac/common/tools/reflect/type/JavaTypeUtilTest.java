@@ -111,17 +111,18 @@ public class JavaTypeUtilTest {
             // 验证类型包含泛型的，并且是循环包含的场景，即 T extends List<T>这种
             Method method = this.getClass().getDeclaredMethod("method1", A.class);
             JavaType javaType = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
+            JavaType javaType1 = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
 
             Assert.assertTrue(javaType instanceof GenericType);
             Assert.assertEquals(javaType.getName(), "T");
             Assert.assertTrue(((GenericType)javaType).getParent() instanceof SimpleType);
-            SimpleType simpleType = (SimpleType) ((GenericType)javaType).getParent();
+            SimpleType simpleType = (SimpleType)((GenericType)javaType).getParent();
             Assert.assertEquals(simpleType.getRawClass(), List.class);
             Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 1);
             Assert.assertTrue(simpleType.getBindingList().get(0) instanceof GenericType);
             GenericType genericType = (GenericType)simpleType.getBindingList().get(0);
             // 递归依赖了，这里直接验证
-            Assert.assertEquals(genericType.getRawClass(), javaType.getRawClass());
+            Assert.assertEquals(javaType1, javaType);
         }
 
         // 泛型数组场景不好构造，这里不单独验证，但是后边会有验证

@@ -12,6 +12,8 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
+import java.util.Objects;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -38,4 +40,23 @@ public class CustomGenericArrayType extends JavaType {
      */
     private int dimensions;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        CustomGenericArrayType that = (CustomGenericArrayType)o;
+        return dimensions == that.dimensions && Objects.equals(componentType, that.componentType);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), componentType, dimensions);
+    }
 }

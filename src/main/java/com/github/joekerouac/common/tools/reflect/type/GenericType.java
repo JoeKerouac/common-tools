@@ -12,6 +12,8 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
+import java.util.Objects;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -42,4 +44,23 @@ public class GenericType extends JavaType {
     @ToString.Exclude
     private JavaType child;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        GenericType that = (GenericType)o;
+        return Objects.equals(parent, that.parent) && Objects.equals(child, that.child);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), parent, child);
+    }
 }

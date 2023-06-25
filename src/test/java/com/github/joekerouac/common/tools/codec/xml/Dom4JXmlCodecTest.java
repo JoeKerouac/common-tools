@@ -93,9 +93,9 @@ public class Dom4JXmlCodecTest {
     @Test
     public void doParse() {
         User user = build();
-        User u1 = PARSER.parse(NOTHASNULL, User.class);
+        User u1 = PARSER.read(NOTHASNULL.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, User.class);
         Assert.assertEquals(user, u1);
-        User u2 = PARSER.parse(HASNULL, User.class);
+        User u2 = PARSER.read(HASNULL.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, User.class);
         Assert.assertEquals(user, u2);
 
         // 这里就不对字段一一对比了
@@ -104,7 +104,8 @@ public class Dom4JXmlCodecTest {
         map1 = PARSER.parseToMap(CONTAIN_HEADER, HashMap.class);
         Assert.assertNotNull(map1);
 
-        Map<String, Object> map2 = PARSER.parse(CONTAIN_HEADER, Map.class);
+        Map<String, Object> map2 =
+            PARSER.read(CONTAIN_HEADER.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, Map.class);
         Assert.assertEquals(map1, map2);
     }
 
