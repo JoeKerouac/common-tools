@@ -14,6 +14,9 @@ package com.github.joekerouac.common.tools.codec;
 
 import java.util.Arrays;
 
+import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
+import com.github.joekerouac.common.tools.util.Assert;
+
 /**
  * 流式base64解码器，允许分批解码；
  * 
@@ -210,6 +213,9 @@ public class StreamBase64 {
          * @return 本次解析长度
          */
         public int update(byte[] src, int offset, int len, byte[] dst) {
+            int outLen = outLength(src, offset, len, false);
+            Assert.assertTrue(dst.length >= outLen, "dst len < outLen",
+                ExceptionProviderConst.IllegalArgumentExceptionProvider);
             return update0(src, offset, len, dst, 0, false);
         }
 
@@ -229,10 +235,41 @@ public class StreamBase64 {
          * @return 本次解析长度
          */
         public int update(byte[] src, int offset, int len, byte[] dst, int dstOffset) {
+            int outLen = outLength(src, offset, len, false);
+            Assert.assertTrue(dst.length - dstOffset >= outLen, "dst len - dstOffset < outLen",
+                ExceptionProviderConst.IllegalArgumentExceptionProvider);
             return update0(src, offset, len, dst, dstOffset, false);
         }
 
-        private int outLength(byte[] src, int offset, int len, boolean end) {
+        /**
+         * 计算outLen
+         *
+         * @param src
+         *            src
+         * @param offset
+         *            offset
+         * @param len
+         *            len
+         * @return outLen
+         */
+        public int outLength(byte[] src, int offset, int len) {
+            return outLength(src, offset, len, false);
+        }
+
+        /**
+         * 计算outLen
+         * 
+         * @param src
+         *            src
+         * @param offset
+         *            offset
+         * @param len
+         *            len
+         * @param end
+         *            是否结束
+         * @return outLen
+         */
+        public int outLength(byte[] src, int offset, int len, boolean end) {
             int[] base64 = isURL ? fromBase64URL : fromBase64;
             int paddings = 0;
             int endOffset = offset + len;
@@ -388,13 +425,6 @@ public class StreamBase64 {
                     }
                     bits |= (b << shiftto);
                     shiftto -= 6;
-                    if (shiftto < 0) {
-                        dst[dp++] = (byte)(bits >> 16);
-                        dst[dp++] = (byte)(bits >> 8);
-                        dst[dp++] = (byte)(bits);
-                        shiftto = 18;
-                        bits = 0;
-                    }
                 }
 
                 this.offset += legacyOffset;
@@ -434,6 +464,22 @@ public class StreamBase64 {
                 }
             }
 
+            /*
+             * 如果目标数组和原数组是同一个，因为我们有遗留数据，所以在写入原数组的时候可能会将原数组中未消费的数据覆盖掉，例如遗留数组中有3个遗留数据，那么只需要从新数组中 
+             * 再读取1个就能解析出3个byte（base64最终就是4个byte解析为3个byte），此时新数组我们只读取了1个byte，但是却要写入3个，会导致有2个byte未消费数据被覆盖，所以我们
+             * 需要通过一定的算法来解决：
+             * 
+             * 当我们要读取1个byte，写入3个byte时，我们需要原数组中2byte的额外空间，因为base64解析时会将4byte数据解析为3byte结果，也就是每组4byte的数据就能为我们剩余1byte
+             * 的额外空间，此时当我们需要2byte的额外空间时（遗留数据有3byte），我们只需要先读取1byte数据，再额外读取2组共计8byte数据，此时前9byte数据已经消费过了，而此时的
+             * 结果也能刚好是9byte（3byte的遗留数据+读取的9byte数据，原文大小12byte，解析结果刚好是9byte），此时将结果写入原数组，就不会覆盖未消费数据了
+             */
+            int tempLen = src == dst ? Math.max(legacyLen - 1, 0) : 0;
+            tempLen = tempLen == 0 ? 0 : tempLen + 1;
+            tempLen = tempLen * 3;
+            byte[] temp = new byte[tempLen];
+            int tempWriteIndex = 0;
+            dp = dp + tempLen;
+
             // 重新计算
             if (!end) {
                 legacyLen = (legacyLen + len) & 0x3;
@@ -471,12 +517,22 @@ public class StreamBase64 {
                 bits |= (b << shiftto);
                 shiftto -= 6;
                 if (shiftto < 0) {
-                    dst[dp++] = (byte)(bits >> 16);
-                    dst[dp++] = (byte)(bits >> 8);
-                    dst[dp++] = (byte)(bits);
+                    if (tempWriteIndex < tempLen) {
+                        temp[tempWriteIndex++] = (byte)(bits >> 16);
+                        temp[tempWriteIndex++] = (byte)(bits >> 8);
+                        temp[tempWriteIndex++] = (byte)(bits);
+                    } else {
+                        dst[dp++] = (byte)(bits >> 16);
+                        dst[dp++] = (byte)(bits >> 8);
+                        dst[dp++] = (byte)(bits);
+                    }
                     shiftto = 18;
                     bits = 0;
                 }
+            }
+
+            if (tempLen > 0) {
+                System.arraycopy(temp, 0, dst, dstOffset, tempLen);
             }
 
             // reached end of byte array or hit padding '=' characters.
