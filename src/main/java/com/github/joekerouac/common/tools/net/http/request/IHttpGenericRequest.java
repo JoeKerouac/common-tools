@@ -27,15 +27,11 @@ import com.github.joekerouac.common.tools.validator.ValidationServiceImpl;
 import lombok.Getter;
 
 /**
- * Http POST请求方法
- * 
- * @since 1.0.0
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
- * @see IHttpGenericRequest
+ * @date 2023-07-03 16:02
+ * @since 2.0.3
  */
-@Deprecated
-public class IHttpPost extends AbstractIHttpRequest {
+public class IHttpGenericRequest extends AbstractIHttpRequest {
 
     private static final ValidationService VALIDATION_SERVICE = new ValidationServiceImpl();
 
@@ -51,16 +47,16 @@ public class IHttpPost extends AbstractIHttpRequest {
     @Getter
     protected String body;
 
-    IHttpPost(String url, String contentType, String charset, String body, Map<String, String> headers,
-        IHttpClient client, IHttpConfig config, List<UploadFile> files) {
-        super(url, IHttpMethod.POST, contentType, charset, headers, client, config);
+    IHttpGenericRequest(String url, IHttpMethod method, String contentType, String charset, String body,
+        Map<String, String> headers, IHttpClient client, IHttpConfig config, List<UploadFile> files) {
+        super(url, method, contentType, charset, headers, client, config);
         this.body = body;
         this.files = files;
     }
 
     @Override
     public String getMethod() {
-        return "POST";
+        return method.name();
     }
 
     /**
@@ -72,11 +68,11 @@ public class IHttpPost extends AbstractIHttpRequest {
      *            HTTP客户端
      * @return POST构建器
      */
-    public static Builder builder(String url, IHttpClient client) {
-        return new Builder(url, client);
+    public static Builder builder(String url, IHttpMethod method, IHttpClient client) {
+        return new Builder(url, method, client);
     }
 
-    public static final class Builder extends AbstractBuilder<IHttpPost> {
+    public static final class Builder extends AbstractIHttpRequest.AbstractBuilder<IHttpGenericRequest> {
 
         private final List<UploadFile> files = new ArrayList<>();
 
@@ -85,19 +81,19 @@ public class IHttpPost extends AbstractIHttpRequest {
          */
         private String body;
 
-        private Builder(String url, IHttpClient client) {
-            super(url, IHttpMethod.POST, client);
+        private Builder(String url, IHttpMethod method, IHttpClient client) {
+            super(url, method, client);
         }
 
         @Override
-        public IHttpPost build() {
-            return new IHttpPost(getUrl(), super.contentType, super.charset, body, super.headers, super.client,
-                super.httpConfig, files);
+        public IHttpGenericRequest build() {
+            return new IHttpGenericRequest(getUrl(), method, super.contentType, super.charset, body, super.headers,
+                super.client, super.httpConfig, files);
         }
 
         /**
          * 添加要上传的文件
-         * 
+         *
          * @param file
          *            文件
          * @return builder
@@ -140,6 +136,6 @@ public class IHttpPost extends AbstractIHttpRequest {
             this.contentType = ContentType.CONTENT_TYPE_FORM;
             return this;
         }
-
     }
+
 }

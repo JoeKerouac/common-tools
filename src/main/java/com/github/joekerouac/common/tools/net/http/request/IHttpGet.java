@@ -24,12 +24,14 @@ import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
  * @since 1.0.0
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
+ * @see IHttpGenericRequest
  */
+@Deprecated
 public class IHttpGet extends AbstractIHttpRequest {
 
     IHttpGet(String url, String contentType, String charset, Map<String, String> headers, IHttpClient client,
         IHttpConfig config) {
-        super(url, contentType, charset, headers, client, config);
+        super(url, IHttpMethod.GET, contentType, charset, headers, client, config);
     }
 
     @Override
@@ -52,7 +54,7 @@ public class IHttpGet extends AbstractIHttpRequest {
 
     public static final class Builder extends AbstractBuilder<IHttpGet> {
         protected Builder(String url, IHttpClient client) {
-            super(url, client);
+            super(url, IHttpMethod.GET, client);
         }
 
         @Override

@@ -29,6 +29,7 @@ import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
 import com.github.joekerouac.common.tools.net.http.exception.NetException;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
+import com.github.joekerouac.common.tools.net.http.request.IHttpMethod;
 import com.github.joekerouac.common.tools.net.http.response.IHttpResponse;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
@@ -84,13 +85,17 @@ public abstract class AbstractIHttpRequest implements IHttpRequest {
     @NotBlank
     protected final String charset;
 
-    protected AbstractIHttpRequest(String url, String contentType, String charset, Map<String, String> headers,
-        IHttpClient client, IHttpConfig config) {
+    protected final IHttpMethod method;
+
+    protected AbstractIHttpRequest(String url, IHttpMethod method, String contentType, String charset,
+        Map<String, String> headers, IHttpClient client, IHttpConfig config) {
         Assert.argNotBlank(url, "url");
         Assert.argNotNull(client, "client");
         Assert.argNotNull(headers, "headers");
+        Assert.argNotNull(method, "method");
 
         this.url = url;
+        this.method = method;
         this.contentType = StringUtils.isBlank(contentType) ? ContentType.CONTENT_TYPE_JSON : contentType;
         this.charset = StringUtils.isBlank(charset) ? Const.DEFAULT_CHARSET.name() : charset;
         this.headers = Collections.unmodifiableMap(headers);
@@ -162,6 +167,8 @@ public abstract class AbstractIHttpRequest implements IHttpRequest {
     @SuppressWarnings("unchecked")
     public static abstract class AbstractBuilder<T extends AbstractIHttpRequest> {
 
+        protected final IHttpMethod method;
+
         /**
          * Http配置
          */
@@ -223,13 +230,15 @@ public abstract class AbstractIHttpRequest implements IHttpRequest {
             }
         }
 
-        protected AbstractBuilder(String url, IHttpClient client) {
+        protected AbstractBuilder(String url, IHttpMethod method, IHttpClient client) {
             Assert.argNotBlank(url, "url");
             Assert.argNotNull(client, "client");
+            Assert.argNotNull(method, "method");
 
             this.client = client;
             this.headers = new HashMap<>();
             this.queryParams = new HashMap<>();
+            this.method = method;
 
             int index = url.indexOf("?");
             if (index > 0) {

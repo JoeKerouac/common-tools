@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
@@ -89,7 +90,10 @@ import com.github.joekerouac.common.tools.net.http.cookie.CookieUtil;
 import com.github.joekerouac.common.tools.net.http.cookie.impl.CookieStoreImpl;
 import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
+import com.github.joekerouac.common.tools.net.http.request.IHttpGenericRequest;
+import com.github.joekerouac.common.tools.net.http.request.IHttpMethod;
 import com.github.joekerouac.common.tools.net.http.request.IHttpPost;
+import com.github.joekerouac.common.tools.net.http.request.UploadFile;
 import com.github.joekerouac.common.tools.net.http.response.IHttpResponse;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.thread.NamedThreadFactory;
@@ -328,45 +332,57 @@ public final class IHttpClient implements AutoCloseable {
     }
 
     private AsyncRequestProducer buildSimpleHttpRequest(AbstractIHttpRequest request) {
-        HttpUriRequestBase httpRequest = new HttpUriRequestBase(request.getMethod(), URI.create(request.getUrl()));
+        String method = request.getMethod();
+        HttpUriRequestBase httpRequest = new HttpUriRequestBase(method, URI.create(request.getUrl()));
 
         // 请求通用配置
         AbstractHttpConfig config = request.getHttpConfig() == null ? this.config : request.getHttpConfig();
         httpRequest.setConfig(buildRequestConfig(config));
         request.getHeaders().forEach(httpRequest::addHeader);
 
+        List<UploadFile> files = null;
+        String body = null;
+
         // 如果是post请求，则需要设置请求体
         if (request instanceof IHttpPost) {
             IHttpPost httpPost = (IHttpPost)request;
 
-            if (!CollectionUtil.isEmpty(httpPost.getFiles())) {
-                // 如果要上传的文件不为空，则使用MultipartEntity
-                MultipartEntityBuilder entityBuilder =
-                    MultipartEntityBuilder.create().setCharset(Charset.forName(request.getCharset()));
-                httpPost.getFiles()
-                    .forEach(file -> entityBuilder.addBinaryBody(file.getName(), file.getFile(),
-                        ContentType.create(file.getContentType(),
-                            StringUtils.getOrDefault(file.getCharset(), Charset.defaultCharset().name())),
-                        file.getFileName()));
-                // 将body解析到form表单
-                if (StringUtils.isNotBlank(httpPost.getBody())) {
-                    final String body = httpPost.getBody();
-                    final String[] split = body.split("&");
-                    Arrays.stream(split).forEach(kv -> {
-                        final String[] kvArr = kv.split("=");
-                        Assert.assertTrue(kvArr.length == 2,
-                            StringUtils.format("当前上传文件不为空，body必须是form表单，当前body不符合要求：[{}]", body),
-                            ExceptionProviderConst.IllegalArgumentExceptionProvider);
-                        entityBuilder.addTextBody(kvArr[0], kvArr[1]);
-                    });
-                }
-
-                httpRequest.setEntity(entityBuilder.build());
-            } else if (StringUtils.isNotBlank(httpPost.getBody())) {
-                // 使用普通StringEntity
-                httpRequest.setEntity(new StringEntity(httpPost.getBody(),
-                    ContentType.create(request.getContentType(), request.getCharset())));
+            files = httpPost.getFiles();
+            body = httpPost.getBody();
+        } else if (request instanceof IHttpGenericRequest) {
+            if (Objects.equals(method, IHttpMethod.POST.name()) || Objects.equals(method, IHttpMethod.PUT.name())
+                || Objects.equals(method, IHttpMethod.PATCH.name())) {
+                IHttpGenericRequest genericRequest = (IHttpGenericRequest)request;
             }
+        }
+
+        if (CollectionUtil.isNotEmpty(files)) {
+            // 如果要上传的文件不为空，则使用MultipartEntity
+            MultipartEntityBuilder entityBuilder =
+                MultipartEntityBuilder.create().setCharset(Charset.forName(request.getCharset()));
+            files
+                .forEach(file -> entityBuilder.addBinaryBody(file.getName(), file.getFile(),
+                    ContentType.create(file.getContentType(),
+                        StringUtils.getOrDefault(file.getCharset(), Charset.defaultCharset().name())),
+                    file.getFileName()));
+            // 将body解析到form表单
+            if (StringUtils.isNotBlank(body)) {
+                final String[] split = body.split("&");
+                String finalBody = body;
+                Arrays.stream(split).forEach(kv -> {
+                    final String[] kvArr = kv.split("=");
+                    Assert.assertTrue(kvArr.length == 2,
+                        StringUtils.format("当前上传文件不为空，body必须是form表单，当前body不符合要求：[{}]", finalBody),
+                        ExceptionProviderConst.IllegalArgumentExceptionProvider);
+                    entityBuilder.addTextBody(kvArr[0], kvArr[1]);
+                });
+            }
+
+            httpRequest.setEntity(entityBuilder.build());
+        } else if (StringUtils.isNotBlank(body)) {
+            // 使用普通StringEntity
+            httpRequest
+                .setEntity(new StringEntity(body, ContentType.create(request.getContentType(), request.getCharset())));
         }
 
         final ByteBuffer buffer;
