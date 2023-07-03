@@ -353,6 +353,8 @@ public final class IHttpClient implements AutoCloseable {
             if (Objects.equals(method, IHttpMethod.POST.name()) || Objects.equals(method, IHttpMethod.PUT.name())
                 || Objects.equals(method, IHttpMethod.PATCH.name())) {
                 IHttpGenericRequest genericRequest = (IHttpGenericRequest)request;
+                files = genericRequest.getFiles();
+                body = genericRequest.getBody();
             }
         }
 
