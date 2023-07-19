@@ -185,7 +185,11 @@ public class InMemoryFile implements Closeable {
         if (file == null) {
             return new ByteArrayInputStream(buffer, 0, index);
         } else {
-            return Files.newInputStream(file.toPath(), StandardOpenOption.READ);
+            InputStream inputStream = Files.newInputStream(file.toPath(), StandardOpenOption.READ);
+            // 这里包一下的意义在于，外部可能把InMemoryFile引用释放了，但是还持有inputStream的引用，还希望继续读取，此时如果我们没有地方持有
+            // InMemoryFile的引用的话临时文件就会被删除，所以我们这里使用一个内部类将InputStream包一下，同时内部类会持有InMemoryFile的
+            // 引用，这样直到外部没有InMemoryFile的显式引用，同时所有InputStream被关闭后，临时文件才会被删除
+            return new InMemoryFileInputStream(inputStream, this);
         }
     }
 
@@ -316,6 +320,35 @@ public class InMemoryFile implements Closeable {
         if (release) {
             throw new IOException("当前资源已经释放");
         }
+    }
+
+    private static final class InMemoryFileInputStream extends InputStream {
+
+        private InputStream inputStream;
+
+        private volatile InMemoryFile inMemoryFile;
+
+        public InMemoryFileInputStream(InputStream inputStream, InMemoryFile inMemoryFile) {
+            this.inputStream = inputStream;
+            this.inMemoryFile = inMemoryFile;
+        }
+
+        @Override
+        public int read() throws IOException {
+            return inputStream.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            return inputStream.read(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            inputStream.close();
+            inMemoryFile = null;
+        }
+
     }
 
 }
