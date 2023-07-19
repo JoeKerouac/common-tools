@@ -14,7 +14,6 @@ package com.github.joekerouac.common.tools.codec.json;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -29,6 +28,7 @@ import org.testng.annotations.Test;
 import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
+import com.github.joekerouac.common.tools.io.InMemoryFileOutputStream;
 import com.github.joekerouac.common.tools.reflect.type.AbstractTypeReference;
 import com.github.joekerouac.common.tools.resource.Resource;
 import com.github.joekerouac.common.tools.resource.impl.ClassPathResource;
@@ -59,17 +59,7 @@ public class JacksonJsonCodecTest {
             JacksonJsonCodec codec = new JacksonJsonCodec();
 
             try (InMemoryFile writeFile = new InMemoryFile(256, 256)) {
-                codec.write(testFile, Charset.defaultCharset(), new OutputStream() {
-                    @Override
-                    public void write(int b) throws IOException {
-                        writeFile.write((byte)b);
-                    }
-
-                    @Override
-                    public void write(byte[] b, int off, int len) throws IOException {
-                        writeFile.write(b, off, len);
-                    }
-                });
+                codec.write(testFile, Charset.defaultCharset(), new InMemoryFileOutputStream(writeFile));
 
                 writeFile.writeFinish();
 

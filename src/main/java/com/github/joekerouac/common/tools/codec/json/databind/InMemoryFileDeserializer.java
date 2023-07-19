@@ -13,7 +13,6 @@
 package com.github.joekerouac.common.tools.codec.json.databind;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -26,6 +25,7 @@ import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.joekerouac.common.tools.codec.json.annotations.InMemoryFileSize;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
+import com.github.joekerouac.common.tools.io.InMemoryFileOutputStream;
 
 /**
  * @author JoeKerouac
@@ -53,17 +53,7 @@ public class InMemoryFileDeserializer extends JsonDeserializer<InMemoryFile>
     public InMemoryFile deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException, JsonProcessingException {
         InMemoryFile memoryFile = new InMemoryFile(initMemoryBufferSize, memoryBufferSize);
-        jsonParser.readBinaryValue(new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                memoryFile.write((byte)b);
-            }
-
-            @Override
-            public void write(byte[] b, int off, int len) throws IOException {
-                memoryFile.write(b, off, len);
-            }
-        });
+        jsonParser.readBinaryValue(new InMemoryFileOutputStream(memoryFile));
 
         memoryFile.writeFinish();
         return memoryFile;
