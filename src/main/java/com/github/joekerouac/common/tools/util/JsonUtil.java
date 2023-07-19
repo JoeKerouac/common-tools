@@ -12,9 +12,13 @@
  */
 package com.github.joekerouac.common.tools.util;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -156,6 +160,81 @@ public class JsonUtil {
     }
 
     /**
+     * 读取数据
+     *
+     * @param inputStream
+     *            数据输入流
+     * @param type
+     *            数据类型
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    public static <T> T read(InputStream inputStream, @NotNull Class<T> type) throws SerializeException {
+        return CODER.read(inputStream, type);
+    }
+
+    /**
+     * 读取数据
+     *
+     * @param inputStream
+     *            数据输入流
+     * @param typeReference
+     *            数据类型引用
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    public static <T> T read(InputStream inputStream, @NotNull AbstractTypeReference<T> typeReference)
+        throws SerializeException {
+        return CODER.read(inputStream, typeReference);
+    }
+
+    /**
+     * 读取数据
+     *
+     * @param inputStream
+     *            数据输入流
+     * @param charset
+     *            数据对应的数据集，传null时默认使用utf8
+     * @param type
+     *            数据类型
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    public static <T> T read(InputStream inputStream, Charset charset, @NotNull Class<T> type)
+        throws SerializeException {
+        return CODER.read(inputStream, charset, type);
+    }
+
+    /**
+     * 读取数据
+     *
+     * @param inputStream
+     *            数据输入流
+     * @param charset
+     *            数据对应的数据集，传null时默认使用utf8
+     * @param typeReference
+     *            数据类型引用
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    public static <T> T read(InputStream inputStream, Charset charset, @NotNull AbstractTypeReference<T> typeReference)
+        throws SerializeException {
+        return CODER.read(inputStream, charset, typeReference);
+    }
+
+    /**
      * 写出数据
      * 
      * @param data
@@ -178,6 +257,32 @@ public class JsonUtil {
      */
     public static byte[] write(Object data, Charset resultCharset) {
         return CODER.write(data, resultCharset);
+    }
+
+    /**
+     * 写出数据到输出流
+     *
+     * @param data
+     *            数据
+     * @param outputStream
+     *            写出流
+     */
+    public static void write(Object data, OutputStream outputStream) {
+        CODER.write(data, outputStream);
+    }
+
+    /**
+     * 写出数据到输出流
+     *
+     * @param data
+     *            数据
+     * @param resultCharset
+     *            结果字符集，如果为空则使用utf8字符集
+     * @param outputStream
+     *            写出流
+     */
+    public static void write(Object data, Charset resultCharset, OutputStream outputStream) {
+        CODER.write(data, resultCharset, outputStream);
     }
 
     /**

@@ -60,9 +60,9 @@ public class IHttpResponse {
     private final int status;
 
     /**
-     * 输入流
+     * 响应数据
      */
-    private final InputStream stream;
+    private final InMemoryFile body;
 
     /**
      * 请求中的异常，如果没有异常那么该值为空
@@ -96,17 +96,19 @@ public class IHttpResponse {
         this.headers = Arrays.asList(httpResponse.getHeaders());
         InMemoryFile file = message.getBody();
         this.len = file.getLen();
-        try {
-            this.stream = file.getDataAsInputStream();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.body = file;
 
         this.charset = Optional.ofNullable(file.getCharset()).orElse(Const.DEFAULT_CHARSET).name();
 
         if (status >= ERR400) {
             ErrorResp resp = null;
-            byte[] data = IOUtils.read(stream, file.getLen(), true);
+            byte[] data;
+            try {
+                data = IOUtils.read(file.getDataAsInputStream(), file.getLen(), true);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
             String msg = null;
 
             try {
@@ -213,7 +215,7 @@ public class IHttpResponse {
         }
 
         if (data == null) {
-            return stream;
+            return body.getDataAsInputStream();
         } else {
             return new ByteArrayInputStream(data);
         }
@@ -230,7 +232,11 @@ public class IHttpResponse {
         }
 
         if (data == null) {
-            data = IOUtils.read(stream, len, true);
+            try {
+                data = IOUtils.read(body.getDataAsInputStream(), len, true);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         return this.data;

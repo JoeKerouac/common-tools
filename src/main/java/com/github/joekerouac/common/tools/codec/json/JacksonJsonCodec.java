@@ -12,6 +12,10 @@
  */
 package com.github.joekerouac.common.tools.codec.json;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -26,16 +30,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
+import com.github.joekerouac.common.tools.codec.json.databind.InMemoryFileDeserializer;
+import com.github.joekerouac.common.tools.codec.json.databind.InMemoryFileSerializer;
 import com.github.joekerouac.common.tools.codec.json.databind.LocalDateTimeDeserializer;
 import com.github.joekerouac.common.tools.codec.json.databind.LocalDateTimeSerializer;
 import com.github.joekerouac.common.tools.codec.json.databind.ResourceDeserializer;
 import com.github.joekerouac.common.tools.codec.json.databind.ResourceSerializer;
 import com.github.joekerouac.common.tools.codec.json.databind.SerializeRegister;
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
-import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.reflect.type.AbstractTypeReference;
-import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
  * jackson实现的json序列化器
@@ -59,6 +63,8 @@ public class JacksonJsonCodec implements Codec {
         serializeRegisters.add(new ResourceSerializer());
         serializeRegisters.add(new LocalDateTimeSerializer());
         serializeRegisters.add(new LocalDateTimeDeserializer());
+        serializeRegisters.add(new InMemoryFileSerializer());
+        serializeRegisters.add(new InMemoryFileDeserializer());
         DEFAULT_SERIALIZE_REGISTERS = Collections.unmodifiableList(serializeRegisters);
     }
 
@@ -94,40 +100,37 @@ public class JacksonJsonCodec implements Codec {
     }
 
     @Override
-    public <T> T read(byte[] data, Charset charset, AbstractTypeReference<T> typeReference) throws SerializeException {
+    public <T> T read(InputStream inputStream, Charset charset, AbstractTypeReference<T> typeReference)
+        throws SerializeException {
         try {
-            if (data == null || data.length == 0 || typeReference == null) {
+            if (inputStream == null) {
                 return null;
             }
 
-            // 实际上jackson只能处理utf8的数据，所以我们需要将数据转换为utf8
-            byte[] jsonData =
-                StringUtils.convert(data, charset == null ? JSON_DEFAULT_CHARSET : charset, JSON_DEFAULT_CHARSET);
-            return mapper.readValue(jsonData, new com.fasterxml.jackson.core.type.TypeReference<T>() {
+            InputStreamReader reader =
+                new InputStreamReader(inputStream, charset == null ? JSON_DEFAULT_CHARSET : charset);
+            return mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<T>() {
                 @Override
                 public Type getType() {
                     return typeReference.getType();
                 }
             });
         } catch (Throwable e) {
-            String msg = String.format("解析数据[%s]失败,类型：[%s]", new String(data, Const.DEFAULT_CHARSET),
-                typeReference.getType().getTypeName());
+            String msg = String.format("解析数据[%s]失败,类型：[%s]", inputStream, typeReference.getType().getTypeName());
             throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, msg, e);
         }
     }
 
     @Override
-    public byte[] write(Object data, Charset charset) {
-        if (data == null) {
-            return new byte[0];
-        }
-
-        try {
-            // 这里返回的数据是utf8字符集的
-            byte[] result = mapper.writeValueAsBytes(data);
-            return StringUtils.convert(result, JSON_DEFAULT_CHARSET, charset == null ? JSON_DEFAULT_CHARSET : charset);
-        } catch (Throwable e) {
-            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, e);
+    public void write(Object data, Charset charset, OutputStream outputStream) {
+        if (data != null) {
+            try {
+                OutputStreamWriter outputStreamWriter =
+                    new OutputStreamWriter(outputStream, charset == null ? JSON_DEFAULT_CHARSET : charset);
+                mapper.writeValue(outputStreamWriter, data);
+            } catch (Throwable e) {
+                throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, e);
+            }
         }
     }
 

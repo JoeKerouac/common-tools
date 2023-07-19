@@ -13,6 +13,7 @@
 package com.github.joekerouac.common.tools.io;
 
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,6 +25,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
+import com.github.joekerouac.common.tools.reference.ReferenceUtils;
+import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
 
 /**
@@ -38,7 +41,7 @@ import com.github.joekerouac.common.tools.util.Assert;
  * @date 2023-06-08 15:19
  * @since 2.0.3
  */
-public class InMemoryFile {
+public class InMemoryFile implements Closeable {
 
     /**
      * 当缓存超过该值时
@@ -60,6 +63,8 @@ public class InMemoryFile {
 
     private volatile boolean close;
 
+    private volatile boolean release;
+
     /**
      * 数据长度
      */
@@ -77,6 +82,7 @@ public class InMemoryFile {
         this.filter = filter;
         this.index = 0;
         this.close = false;
+        this.release = false;
         this.len = 0;
     }
 
@@ -99,7 +105,7 @@ public class InMemoryFile {
             throw new IOException("文件已经关闭，无法写入");
         }
 
-        Assert.assertTrue(this.len + l > 0, "当前累计写出数据过大，无法继续写入",
+        Assert.assertTrue(this.len + l > 0, StringUtils.format("当前累计写出数据过大，无法继续写入, len: [{}], l: [{}]", this.len, l),
             ExceptionProviderConst.UnsupportedOperationExceptionProvider);
 
         ByteBufferRef ref = new ByteBufferRef(d, o, l);
@@ -117,6 +123,8 @@ public class InMemoryFile {
      *             IO异常
      */
     public void flush() throws IOException {
+        check();
+
         if (index > 0 && outputStream != null) {
             outputStream.write(buffer, 0, index);
         }
@@ -133,8 +141,6 @@ public class InMemoryFile {
      *             IO异常
      */
     public void writeFinish() throws IOException {
-        flush();
-
         ByteBufferRef ref = null;
         if (filter != null) {
             ref = filter.finish();
@@ -143,6 +149,8 @@ public class InMemoryFile {
         if (ref != null) {
             write0(ref);
         }
+
+        flush();
 
         if (outputStream != null) {
             outputStream.close();
@@ -172,10 +180,38 @@ public class InMemoryFile {
             throw new IOException("当前输出流还未关闭，无法获取输入流");
         }
 
+        check();
+
         if (file == null) {
             return new ByteArrayInputStream(buffer, 0, index);
         } else {
-            return Files.newInputStream(file.toPath(), StandardOpenOption.READ, StandardOpenOption.DELETE_ON_CLOSE);
+            return Files.newInputStream(file.toPath(), StandardOpenOption.READ);
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (release) {
+            return;
+        }
+
+        release = true;
+
+        if (buffer != null) {
+            buffer = null;
+        }
+
+        if (outputStream != null) {
+            outputStream.close();
+            outputStream = null;
+        }
+
+        if (file != null) {
+            if (file.exists()) {
+                Assert.assertTrue(file.delete(), StringUtils.format("临时文件删除失败, [{}]", file.getAbsolutePath()),
+                    ExceptionProviderConst.IllegalStateExceptionProvider);
+            }
+            file = null;
         }
     }
 
@@ -230,14 +266,15 @@ public class InMemoryFile {
      *             IO异常
      */
     private void write0(ByteBufferRef ref) throws IOException {
+        check();
         byte[] data = ref.getData();
         int offset = ref.getOffset();
         int len = ref.getLen();
 
-        int writeLen = Math.min(len, buffer.length - index);
-        if (writeLen < len) {
+        int writeable = Math.min(len, buffer.length - index);
+        if (writeable < len) {
             if ((limit - index) >= len) {
-                // 扩容后不超过limit
+                // 扩容后足够写入本次数据，则扩容，并将数据写入
                 int newBufferSize = Math.max(Math.min(buffer.length * 3 / 2, limit), len + index);
                 newBufferSize = (limit - newBufferSize) < (newBufferSize / 10 * 3) ? limit : newBufferSize;
                 byte[] newBuffer = new byte[newBufferSize];
@@ -249,14 +286,20 @@ public class InMemoryFile {
                 // 扩容后超过limit了，将数据填满，写出到文件，然后继续填充
                 if (outputStream == null) {
                     file = File.createTempFile("WriteCache", ".tmp");
+                    String filePath = file.getAbsolutePath();
                     outputStream = new FileOutputStream(file);
+                    // 兜底释放文件，防止用户忘记释放
+                    ReferenceUtils.listenDestroy(file, () -> new File(filePath).delete());
                 }
 
-                outputStream.write(buffer, 0, index);
+                if (index > 0) {
+                    outputStream.write(buffer, 0, index);
+                    index = 0;
+                }
+
                 outputStream.write(data, offset, len);
 
-                index = 0;
-                // 直接扩容
+                // 直接扩容到最大
                 if (buffer.length < limit) {
                     buffer = new byte[limit];
                 }
@@ -267,6 +310,12 @@ public class InMemoryFile {
         }
 
         this.len += len;
+    }
+
+    private void check() throws IOException {
+        if (release) {
+            throw new IOException("当前资源已经释放");
+        }
     }
 
 }

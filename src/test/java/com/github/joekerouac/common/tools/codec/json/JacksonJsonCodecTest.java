@@ -12,9 +12,15 @@
  */
 package com.github.joekerouac.common.tools.codec.json;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Random;
 
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -22,6 +28,7 @@ import org.testng.annotations.Test;
 
 import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
+import com.github.joekerouac.common.tools.io.InMemoryFile;
 import com.github.joekerouac.common.tools.reflect.type.AbstractTypeReference;
 import com.github.joekerouac.common.tools.resource.Resource;
 import com.github.joekerouac.common.tools.resource.impl.ClassPathResource;
@@ -37,6 +44,61 @@ import lombok.NoArgsConstructor;
  * @date 2022-10-14 14:37:00
  */
 public class JacksonJsonCodecTest {
+
+    @Test
+    public void testInMemoryFile() throws IOException {
+        // 构建一个10M的文件
+        try (InMemoryFile testFile = new InMemoryFile(1024, 1024)) {
+            byte[] data = new byte[1024 * 1024];
+            for (int i = 0; i < 10; i++) {
+                new Random().nextBytes(data);
+                testFile.write(data);
+            }
+            testFile.writeFinish();
+
+            JacksonJsonCodec codec = new JacksonJsonCodec();
+
+            try (InMemoryFile writeFile = new InMemoryFile(256, 256)) {
+                codec.write(testFile, Charset.defaultCharset(), new OutputStream() {
+                    @Override
+                    public void write(int b) throws IOException {
+                        writeFile.write((byte)b);
+                    }
+
+                    @Override
+                    public void write(byte[] b, int off, int len) throws IOException {
+                        writeFile.write(b, off, len);
+                    }
+                });
+
+                writeFile.writeFinish();
+
+                try (InMemoryFile read =
+                    codec.read(writeFile.getDataAsInputStream(), Charset.defaultCharset(), InMemoryFile.class)) {
+
+                    // 开始比较最初的文件与经过序列化、反序列化后的文件是否相同
+                    InputStream source = testFile.getDataAsInputStream();
+                    InputStream dst = read.getDataAsInputStream();
+                    byte[] srcBuffer = new byte[1024];
+                    byte[] dstBuffer = new byte[1024];
+                    int srcLen;
+                    while ((srcLen = source.read(srcBuffer)) > 0) {
+                        int dstLen = 0;
+                        int l;
+                        while (srcLen - dstLen > 0 && (l = dst.read(dstBuffer, dstLen, srcLen - dstLen)) > 0) {
+                            dstLen += l;
+                        }
+
+                        Assert.assertEquals(dstLen, srcLen);
+                        Assert.assertEquals(dstBuffer, srcBuffer);
+                        Arrays.fill(srcBuffer, (byte)0);
+                        Arrays.fill(dstBuffer, (byte)0);
+                    }
+                }
+            }
+        }
+
+    }
 
     @Test(dataProvider = "testResourceDataProvider")
     public void testResource(JacksonJsonCodec jacksonJsonSerialization, ResourceHolder holder) {

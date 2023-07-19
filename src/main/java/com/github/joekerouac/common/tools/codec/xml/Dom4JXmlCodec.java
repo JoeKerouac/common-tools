@@ -12,9 +12,11 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ import com.github.joekerouac.common.tools.codec.xml.deserializer.BeanDeserialize
 import com.github.joekerouac.common.tools.codec.xml.deserializer.Deserializers;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
+import com.github.joekerouac.common.tools.io.IOUtils;
 import com.github.joekerouac.common.tools.reflect.AccessorUtil;
 import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.reflect.bean.BeanUtils;
@@ -633,24 +636,27 @@ public class Dom4JXmlCodec implements Codec {
     }
 
     @Override
-    public <T> T read(byte[] data, Charset charset, Class<T> type) throws SerializeException {
-        return parse(new String(data, charset == null ? StandardCharsets.UTF_8 : charset),
-            new AbstractTypeReference<T>() {
-                @Override
-                public Type getType() {
-                    return type;
-                }
-            });
-    }
-
-    @Override
-    public <T> T read(byte[] data, Charset charset, AbstractTypeReference<T> typeReference) throws SerializeException {
+    public <T> T read(InputStream inputStream, Charset charset, AbstractTypeReference<T> typeReference)
+        throws SerializeException {
+        byte[] data = IOUtils.read(inputStream, true);
         return parse(new String(data, charset), typeReference);
     }
 
     @Override
     public byte[] write(Object data, Charset charset) {
         return toXml(data, charset).getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
+    }
+
+    @Override
+    public void write(Object data, Charset resultCharset, OutputStream outputStream) {
+        byte[] xmlData =
+            toXml(data, resultCharset).getBytes(resultCharset == null ? StandardCharsets.UTF_8 : resultCharset);
+        try {
+            outputStream.write(xmlData);
+            outputStream.flush();
+        } catch (IOException e) {
+            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, e);
+        }
     }
 
     /**
