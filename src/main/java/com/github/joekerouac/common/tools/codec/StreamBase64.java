@@ -344,10 +344,12 @@ public class StreamBase64 {
             }
 
             if (paddings == 0 && (dataLen & 0x3) != 0 && end) {
+                // 应该有padding的，但是实际没有padding，我们主动将padding长度补充上
                 paddings = 4 - (dataLen & 0x3);
+                dataLen += paddings;
             }
 
-            return 3 * ((dataLen + 3) / 4) - paddings;
+            return 3 * (dataLen / 4) - paddings;
         }
 
         /**
@@ -532,7 +534,9 @@ public class StreamBase64 {
             }
 
             if (tempLen > 0) {
-                System.arraycopy(temp, 0, dst, dstOffset, tempLen);
+                System.arraycopy(temp, 0, dst, dstOffset, tempWriteIndex);
+                // 如果temp放的正好是最后一组数据，同时数据最后包含=，那之前的dp计算实际是有问题的
+                dp -= (tempLen - tempWriteIndex);
             }
 
             // reached end of byte array or hit padding '=' characters.
