@@ -75,10 +75,25 @@ public class GZIPUtils {
      * @return 压缩后的数据
      */
     public static byte[] compress(byte[] data) {
+        return compress(data, 0, data.length);
+    }
+
+    /**
+     * 对指定数据进行压缩
+     *
+     * @param data
+     *            要压缩的数据
+     * @param offset
+     *            offset
+     * @param len
+     *            len
+     * @return 压缩后的数据
+     */
+    public static byte[] compress(byte[] data, int offset, int len) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(outputStream, 1024)) {
-            gzipOutputStream.write(data);
+            gzipOutputStream.write(data, offset, len);
             gzipOutputStream.flush();
             gzipOutputStream.finish();
         } catch (IOException e) {
@@ -97,17 +112,32 @@ public class GZIPUtils {
      * @return 解压缩后的数据
      */
     public static byte[] decompress(byte[] data) {
+        return decompress(data, 0, data.length);
+    }
+
+    /**
+     * 解压缩
+     *
+     * @param data
+     *            要解压缩的数据（需要是gzip算法压缩的）
+     * @param offset
+     *            offset
+     * @param len
+     *            len
+     * @return 解压缩后的数据
+     */
+    public static byte[] decompress(byte[] data, int offset, int len) {
         if (CollectionUtil.isEmpty(data)) {
             return new byte[0];
         }
 
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(data, offset, len);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (GZIPInputStream gzipInputStream = new GZIPInputStream(inputStream, 1024)) {
             byte[] buffer = new byte[1024];
-            int len;
-            while ((len = gzipInputStream.read(buffer, 0, buffer.length)) > 0) {
-                outputStream.write(buffer, 0, len);
+            int l;
+            while ((l = gzipInputStream.read(buffer, 0, buffer.length)) > 0) {
+                outputStream.write(buffer, 0, l);
             }
         } catch (IOException e) {
             // 这里不可能会有IO异常

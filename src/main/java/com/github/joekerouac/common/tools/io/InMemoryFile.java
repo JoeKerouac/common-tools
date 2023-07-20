@@ -251,10 +251,9 @@ public class InMemoryFile implements Closeable {
                 return Arrays.copyOf(buffer, index);
             }
         } else {
-            InputStream inputStream =
-                Files.newInputStream(file.toPath(), StandardOpenOption.READ, StandardOpenOption.DELETE_ON_CLOSE);
             Assert.assertTrue(file.length() <= Integer.MAX_VALUE, "文件过大，不支持读取",
                 ExceptionProviderConst.UnsupportedOperationExceptionProvider);
+            InputStream inputStream = Files.newInputStream(file.toPath(), StandardOpenOption.READ);
             return IOUtils.read(inputStream, (int)file.length(), true);
         }
     }
