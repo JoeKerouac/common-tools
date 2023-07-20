@@ -83,6 +83,7 @@ public class InMemoryFile implements Closeable {
         InMemoryFile inMemoryFile = new InMemoryFile(data.length, data.length);
         inMemoryFile.buffer = data;
         inMemoryFile.index = data.length;
+        inMemoryFile.len = data.length;
         inMemoryFile.close = true;
         return inMemoryFile;
     }
