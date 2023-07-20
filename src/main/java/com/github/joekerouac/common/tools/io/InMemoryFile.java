@@ -72,6 +72,21 @@ public class InMemoryFile implements Closeable {
 
     private volatile Charset charset;
 
+    /**
+     * 将数据包装为内存文件
+     * 
+     * @param data
+     *            数据
+     * @return 内存文件
+     */
+    public static InMemoryFile wrap(byte[] data) {
+        InMemoryFile inMemoryFile = new InMemoryFile(data.length, data.length);
+        inMemoryFile.buffer = data;
+        inMemoryFile.index = data.length;
+        inMemoryFile.close = true;
+        return inMemoryFile;
+    }
+
     public InMemoryFile(int initBuffer, int limit) {
         this(initBuffer, limit, null);
     }
