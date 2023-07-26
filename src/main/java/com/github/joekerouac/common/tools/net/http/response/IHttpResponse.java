@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpResponse;
 import org.apache.hc.core5.http.Message;
 
@@ -72,7 +71,8 @@ public class IHttpResponse {
     /**
      * 响应header
      */
-    private final List<Header> headers;
+    @Getter
+    private final List<IHeader> headers;
 
     /**
      * 响应编码
@@ -93,7 +93,7 @@ public class IHttpResponse {
     public IHttpResponse(Message<HttpResponse, InMemoryFile> message) {
         HttpResponse httpResponse = message.getHead();
         this.status = httpResponse.getCode();
-        this.headers = Arrays.asList(httpResponse.getHeaders());
+        this.headers = Arrays.stream(httpResponse.getHeaders()).map(IHeader::new).collect(Collectors.toList());
         InMemoryFile file = message.getBody();
         this.len = file.getLen();
         this.body = file;
@@ -112,6 +112,7 @@ public class IHttpResponse {
             String msg = null;
 
             try {
+                LOGGER.info("请求失败，响应数据: [{}]", new String(data, charset));
                 resp = JsonUtil.read(data, Charset.forName(charset), ErrorResp.class);
             } catch (Exception e) {
                 // 异常忽略
@@ -147,8 +148,7 @@ public class IHttpResponse {
             return Collections.emptyList();
         }
 
-        return headers.stream().filter(header -> name.equals(header.getName())).map(IHeader::new)
-            .collect(Collectors.toList());
+        return headers.stream().filter(header -> name.equals(header.getName())).collect(Collectors.toList());
     }
 
     /**
