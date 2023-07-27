@@ -28,12 +28,10 @@ import org.apache.hc.core5.http.Message;
 import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.io.IOUtils;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
-import com.github.joekerouac.common.tools.net.http.exception.ServerException;
+import com.github.joekerouac.common.tools.net.http.exception.NetException;
 import com.github.joekerouac.common.tools.string.StringUtils;
-import com.github.joekerouac.common.tools.util.JsonUtil;
 
 import lombok.CustomLog;
-import lombok.Data;
 import lombok.Getter;
 
 /**
@@ -66,7 +64,7 @@ public class IHttpResponse {
     /**
      * 请求中的异常，如果没有异常那么该值为空
      */
-    private final ServerException exception;
+    private final NetException exception;
 
     /**
      * 响应header
@@ -101,7 +99,6 @@ public class IHttpResponse {
         this.charset = Optional.ofNullable(file.getCharset()).orElse(Const.DEFAULT_CHARSET).name();
 
         if (status >= ERR400) {
-            ErrorResp resp = null;
             byte[] data;
             try {
                 data = IOUtils.read(file.getDataAsInputStream(), file.getLen(), true);
@@ -109,28 +106,9 @@ public class IHttpResponse {
                 throw new RuntimeException(e);
             }
 
-            String msg = null;
+            String msg = new String(data, Charset.forName(this.charset));
 
-            try {
-                LOGGER.info("请求失败，响应数据: [{}]", new String(data, charset));
-                resp = JsonUtil.read(data, Charset.forName(charset), ErrorResp.class);
-            } catch (Exception e) {
-                // 异常忽略
-                msg = new String(data, Charset.forName(this.charset));
-                LOGGER.info("响应4xx数据无法解析，数据为：[{}]", msg);
-            }
-
-            if (resp == null) {
-                resp = new ErrorResp();
-                resp.setMessage(msg);
-                resp.setError(msg);
-                resp.setStatus(status);
-                resp.setPath("unknown");
-                resp.setException("unknown");
-            }
-
-            this.exception =
-                new ServerException(resp.getPath(), resp.getException(), resp.getMessage(), resp.getError(), status);
+            this.exception = new NetException(msg);
         } else {
             this.exception = null;
         }
@@ -156,7 +134,7 @@ public class IHttpResponse {
      * 
      * @return 网络异常
      */
-    public ServerException getServerException() {
+    public RuntimeException getException() {
         return exception;
     }
 
@@ -260,40 +238,4 @@ public class IHttpResponse {
         return this.status;
     }
 
-    /**
-     * 该对象的部分字段可能是固定的
-     */
-    @Data
-    private static final class ErrorResp {
-
-        /**
-         * 时间戳
-         */
-        private String timestamp;
-
-        /**
-         * 当前http响应状态
-         */
-        private int status;
-
-        /**
-         * 错误说明
-         */
-        private String error;
-
-        /**
-         * 异常
-         */
-        private String exception;
-
-        /**
-         * message
-         */
-        private String message;
-
-        /**
-         * 路径
-         */
-        private String path;
-    }
 }
