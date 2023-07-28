@@ -446,6 +446,89 @@ public class HttpRequestUtil {
      *            body
      * @param charset
      *            charset
+     * @param mimeType
+     *            mimeType，参考{@link com.github.joekerouac.common.tools.net.http.ContentType}
+     * @param futureCallback
+     *            回调
+     * @return 结果
+     */
+    public static Future<IHttpResponse> request(@NotNull CloseableHttpAsyncClient client, @NotBlank String url,
+        @NotNull IHttpMethod method, Map<String, String> headers, byte[] body, String charset, String mimeType,
+        FutureCallback<IHttpResponse> futureCallback) {
+        return request(client, url, method, headers, body, charset, null, mimeType, null, futureCallback);
+    }
+
+    /**
+     * 发起请求
+     *
+     * @param client
+     *            client
+     * @param url
+     *            url
+     * @param method
+     *            method
+     * @param headers
+     *            headers
+     * @param body
+     *            body
+     * @param charset
+     *            charset
+     * @param mimeType
+     *            mimeType，参考{@link com.github.joekerouac.common.tools.net.http.ContentType}
+     * @param config
+     *            请求配置
+     * @return 结果
+     */
+    public static Future<IHttpResponse> request(@NotNull CloseableHttpAsyncClient client, @NotBlank String url,
+        @NotNull IHttpMethod method, Map<String, String> headers, byte[] body, String charset, String mimeType,
+        IHttpConfig config) {
+        return request(client, url, method, headers, body, charset, null, mimeType, config, null);
+    }
+
+    /**
+     * 发起请求
+     *
+     * @param client
+     *            client
+     * @param url
+     *            url
+     * @param method
+     *            method
+     * @param headers
+     *            headers
+     * @param body
+     *            body
+     * @param charset
+     *            charset
+     * @param mimeType
+     *            mimeType，参考{@link com.github.joekerouac.common.tools.net.http.ContentType}
+     * @param config
+     *            请求配置
+     * @param futureCallback
+     *            回调
+     * @return 结果
+     */
+    public static Future<IHttpResponse> request(@NotNull CloseableHttpAsyncClient client, @NotBlank String url,
+        @NotNull IHttpMethod method, Map<String, String> headers, byte[] body, String charset, String mimeType,
+        IHttpConfig config, FutureCallback<IHttpResponse> futureCallback) {
+        return request(client, url, method, headers, body, charset, null, mimeType, config, futureCallback);
+    }
+
+    /**
+     * 发起请求
+     *
+     * @param client
+     *            client
+     * @param url
+     *            url
+     * @param method
+     *            method
+     * @param headers
+     *            headers
+     * @param body
+     *            body
+     * @param charset
+     *            charset
      * @param files
      *            files
      * @param mimeType
