@@ -107,8 +107,6 @@ public class AreaTest {
         IHttpClientConfig config = new IHttpClientConfig();
         config.setMaxTotal(10);
         config.setDefaultMaxPerRoute(10);
-        config.setConnectTimeout(3000);
-        config.setConnectionRequestTimeout(1000 * 30);
         config.setSocketTimeout(5000);
         IHttpClient client = IHttpClient.builder().config(config).build();
         List<Future> futures = new ArrayList<>();

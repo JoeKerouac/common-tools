@@ -14,65 +14,36 @@ package com.github.joekerouac.common.tools.net.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 
-import org.apache.hc.client5.http.DnsResolver;
-import org.apache.hc.client5.http.SystemDefaultDnsResolver;
-import org.apache.hc.client5.http.auth.AuthScope;
-import org.apache.hc.client5.http.auth.StandardAuthScheme;
-import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.client5.http.cookie.StandardCookieSpec;
 import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
-import org.apache.hc.client5.http.impl.DefaultSchemePortResolver;
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient;
 import org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder;
 import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
-import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
-import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.nio.AsyncClientConnectionManager;
-import org.apache.hc.client5.http.protocol.RedirectStrategy;
-import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.HttpException;
-import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.HttpResponse;
 import org.apache.hc.core5.http.Message;
-import org.apache.hc.core5.http.config.CharCodingConfig;
-import org.apache.hc.core5.http.config.Http1Config;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.nio.AsyncEntityProducer;
 import org.apache.hc.core5.http.nio.AsyncRequestProducer;
 import org.apache.hc.core5.http.nio.DataStreamChannel;
-import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.http.nio.support.BasicRequestProducer;
 import org.apache.hc.core5.http.nio.support.BasicResponseConsumer;
-import org.apache.hc.core5.pool.PoolConcurrencyPolicy;
-import org.apache.hc.core5.pool.PoolReusePolicy;
-import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.apache.hc.core5.ssl.SSLContexts;
-import org.apache.hc.core5.util.TimeValue;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.concurrent.FutureCallback;
@@ -80,13 +51,10 @@ import com.github.joekerouac.common.tools.concurrent.ResultConvertFuture;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
 import com.github.joekerouac.common.tools.log.Logger;
-import com.github.joekerouac.common.tools.net.http.config.AbstractHttpConfig;
-import com.github.joekerouac.common.tools.net.http.config.HttpProxy;
-import com.github.joekerouac.common.tools.net.http.config.IHttp1config;
 import com.github.joekerouac.common.tools.net.http.config.IHttpClientConfig;
+import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
 import com.github.joekerouac.common.tools.net.http.cookie.Cookie;
 import com.github.joekerouac.common.tools.net.http.cookie.CookieStore;
-import com.github.joekerouac.common.tools.net.http.cookie.CookieUtil;
 import com.github.joekerouac.common.tools.net.http.cookie.impl.CookieStoreImpl;
 import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
@@ -96,8 +64,6 @@ import com.github.joekerouac.common.tools.net.http.request.IHttpPost;
 import com.github.joekerouac.common.tools.net.http.request.UploadFile;
 import com.github.joekerouac.common.tools.net.http.response.IHttpResponse;
 import com.github.joekerouac.common.tools.string.StringUtils;
-import com.github.joekerouac.common.tools.thread.NamedThreadFactory;
-import com.github.joekerouac.common.tools.thread.UncaughtExceptionHandlerThreadFactory;
 import com.github.joekerouac.common.tools.util.Assert;
 
 import lombok.Builder;
@@ -136,46 +102,19 @@ public final class IHttpClient implements AutoCloseable {
     private static final Supplier<HttpAsyncClientBuilder> HTTP_ASYNC_CLIENT_BUILDER_SUPPLIER = HttpAsyncClients::custom;
 
     /**
-     * 连接验证间隔，单位秒，如果连接超过该间隔没有活动，需要重新验证连接然后才能给用户
-     */
-    private static final int VALIDATE_INTERVAL = 60;
-
-    /**
-     * 不自动重定向
-     */
-    private static final RedirectStrategy NO_REDIRECT;
-
-    static {
-        NO_REDIRECT = new RedirectStrategy() {
-
-            @Override
-            public boolean isRedirected(HttpRequest request, HttpResponse response,
-                org.apache.hc.core5.http.protocol.HttpContext context) throws HttpException {
-                return false;
-            }
-
-            @Override
-            public URI getLocationURI(HttpRequest request, HttpResponse response,
-                org.apache.hc.core5.http.protocol.HttpContext context) throws HttpException {
-                return null;
-            }
-        };
-    }
-
-    /**
      * client ID，用来唯一区分HttpClient
      */
-    private String id;
+    private final String id;
 
     /**
      * HttpClient
      */
-    private CloseableHttpAsyncClient httpClient;
+    private final CloseableHttpAsyncClient httpClient;
 
     /**
      * cookie store ，存储cookie
      */
-    private CookieStore cookieStore;
+    private final CookieStore cookieStore;
 
     /**
      * 配置
@@ -205,12 +144,15 @@ public final class IHttpClient implements AutoCloseable {
     private IHttpClient(IHttpClientConfig config, CookieStore cookieStore, SSLContext sslcontext, boolean noRedirect,
         Logger logger, Supplier<HttpAsyncClientBuilder> httpAsyncClientBuilderSupplier) {
         this.config = config == null ? new IHttpClientConfig() : config;
-        CookieStore cookieStoreNotNull = cookieStore == null ? new CookieStoreImpl() : cookieStore;
+        this.cookieStore = cookieStore == null ? new CookieStoreImpl() : cookieStore;
         SSLContext sslContextNotNull = sslcontext == null ? SSLContexts.createSystemDefault() : sslcontext;
         this.logger = logger == null ? LOGGER : logger;
         Supplier<HttpAsyncClientBuilder> builderSupplier = httpAsyncClientBuilderSupplier == null
             ? HTTP_ASYNC_CLIENT_BUILDER_SUPPLIER : httpAsyncClientBuilderSupplier;
-        this.init(this.config, cookieStoreNotNull, sslContextNotNull, noRedirect, builderSupplier);
+        this.id = String.valueOf(System.currentTimeMillis());
+        this.httpClient = HttpClientUtil.buildCloseableHttpAsyncClient(this.config, this.cookieStore, sslContextNotNull,
+            noRedirect, builderSupplier);
+        this.httpClient.start();
     }
 
     /**
@@ -231,7 +173,7 @@ public final class IHttpClient implements AutoCloseable {
         FutureCallback<IHttpResponse> callback = futureCallback == null ? EMPTY_CALLBACK : futureCallback;
 
         AsyncRequestProducer requestProducer = buildSimpleHttpRequest(request);
-        AbstractHttpConfig config = request.getHttpConfig() == null ? this.config : request.getHttpConfig();
+        IHttpConfig config = request.getHttpConfig() == null ? this.config.getHttpConfig() : request.getHttpConfig();
 
         BasicResponseConsumer<InMemoryFile> responseConsumer =
             new BasicResponseConsumer<>(new StreamAsyncEntityConsumer(config.getInitBufferSize(),
@@ -336,7 +278,7 @@ public final class IHttpClient implements AutoCloseable {
         HttpUriRequestBase httpRequest = new HttpUriRequestBase(method, URI.create(request.getUrl()));
 
         // 请求通用配置
-        AbstractHttpConfig config = request.getHttpConfig() == null ? this.config : request.getHttpConfig();
+        IHttpConfig config = request.getHttpConfig() == null ? this.config.getHttpConfig() : request.getHttpConfig();
         httpRequest.setConfig(buildRequestConfig(config));
         request.getHeaders().forEach(httpRequest::addHeader);
 
@@ -466,7 +408,7 @@ public final class IHttpClient implements AutoCloseable {
      *            请求配置
      * @return requestConfig
      */
-    private RequestConfig buildRequestConfig(AbstractHttpConfig config) {
+    private RequestConfig buildRequestConfig(IHttpConfig config) {
         logger.debug("构建请求配置");
         RequestConfig requestConfig =
             RequestConfig.custom().setConnectTimeout(config.getConnectTimeout(), TimeUnit.MILLISECONDS)
@@ -474,195 +416,5 @@ public final class IHttpClient implements AutoCloseable {
                 .setConnectionRequestTimeout(config.getConnectionRequestTimeout(), TimeUnit.MILLISECONDS).build();
         logger.debug("请求配置为：[{}]", requestConfig);
         return requestConfig;
-    }
-
-    /**
-     * 初始化http client
-     * 
-     * @param config
-     *            config
-     * @param cookieStore
-     *            cookie store
-     * @param sslcontext
-     *            ssl context
-     * @param noRedirect
-     *            是否自动重定向，true表示不重定向
-     * @param httpAsyncClientBuilderSupplier
-     *            HttpAsyncClientBuilder提供器
-     */
-    private void init(IHttpClientConfig config, CookieStore cookieStore, SSLContext sslcontext, boolean noRedirect,
-        Supplier<HttpAsyncClientBuilder> httpAsyncClientBuilderSupplier) {
-        logger.debug("正在初始化HttpClient");
-
-        // 根据配置构建httpClient
-        HttpAsyncClientBuilder builder = httpAsyncClientBuilderSupplier.get();
-
-        ThreadFactory threadFactory = config.getThreadFactory();
-        if (threadFactory == null) {
-            threadFactory = new UncaughtExceptionHandlerThreadFactory(new NamedThreadFactory("http-client-io", true),
-                (t, e) -> LOGGER.warn(e, "HTTP IO/回调 线程出错"));
-        }
-        builder.setThreadFactory(threadFactory);
-
-        {
-            // http1配置
-            IHttp1config iHttp1config = config.getHttp1config();
-            Http1Config http1Config = Http1Config.custom().setBufferSize(iHttp1config.getHttpSessionBufferSize())
-                .setChunkSizeHint(iHttp1config.getHttpChunkSizeHint())
-                .setMaxLineLength(iHttp1config.getHttpMaxLineLength())
-                .setMaxHeaderCount(iHttp1config.getHttpMaxHeaderCount()).build();
-            builder.setHttp1Config(http1Config);
-            logger.debug("http1配置：[{}]", iHttp1config);
-        }
-
-        {
-            // socket配置
-            IOReactorConfig ioReactorConfig = IOReactorConfig.custom().setIoThreadCount(config.getIoThreadCount())
-                .setTcpNoDelay(config.isTcpNoDelay()).setSndBufSize(config.getSndBufSize())
-                .setSoTimeout(config.getSocketTimeout(), TimeUnit.MILLISECONDS).setSoKeepAlive(config.isKeepAlive())
-                .setRcvBufSize(config.getRcvBufSize()).build();
-            builder.setIOReactorConfig(ioReactorConfig);
-            logger.debug("socket配置：[{}]", ioReactorConfig);
-        }
-
-        {
-            // 编码配置
-            // MalformedInputAction: 编码格式错误时的处理方式，设置为null时默认使用REPORT；
-            // UnmappableInputAction: 编码不可映射时的处理方式，设置为null时默认使用REPORT；
-            // CodingErrorAction.IGNORE: 丢弃错误的输入；
-            // CodingErrorAction.REPLACE: 丢弃错误的数据，并且把编码的替换值替换到输出；
-            // CodingErrorAction.REPORT: 抛出异常；
-            CharCodingConfig charCodingConfig = CharCodingConfig.custom().setCharset(config.getCharset())
-                .setMalformedInputAction(CodingErrorAction.REPORT).setUnmappableInputAction(CodingErrorAction.REPORT)
-                .build();
-            builder.setCharCodingConfig(charCodingConfig);
-            logger.debug("默认连接编码配置为：{}", charCodingConfig);
-        }
-
-        {
-            HttpProxy proxy = config.getProxy();
-            if (proxy != null) {
-                HttpHost httpHost = new HttpHost(proxy.getHost(), proxy.getPort());
-                builder.setProxy(httpHost);
-
-                // 如果代理中的用户名不为空则认为代理是需要认证的，传入认证信息
-                if (StringUtils.isNotBlank(proxy.getUsername())) {
-                    BasicCredentialsProvider provider = new BasicCredentialsProvider();
-                    provider.setCredentials(new AuthScope(httpHost),
-                        new UsernamePasswordCredentials(proxy.getUsername(), proxy.getPassword().toCharArray()));
-                    builder.setDefaultCredentialsProvider(provider);
-                }
-            }
-
-            if (noRedirect) {
-                logger.debug("用户设置不重定向，客户端将不会重定向");
-                builder.setRedirectStrategy(NO_REDIRECT);
-            }
-
-            if (StringUtils.isNotBlank(config.getUserAgent())) {
-                builder.setUserAgent(config.getUserAgent());
-                logger.debug("当前全局用户代理为：[{}]", config.getUserAgent());
-            }
-        }
-
-        {
-            AsyncClientConnectionManager connectionManager = buildAsyncClientConnectionManager(config, sslcontext);
-            builder.setConnectionManager(connectionManager);
-        }
-
-        {
-            org.apache.hc.client5.http.cookie.CookieStore httpClientCookieStore;
-            if (cookieStore instanceof CookieStoreImpl) {
-                httpClientCookieStore = ((CookieStoreImpl)cookieStore).getHttpClientCookieStore();
-            } else {
-                httpClientCookieStore = new org.apache.hc.client5.http.cookie.CookieStore() {
-                    @Override
-                    public void addCookie(org.apache.hc.client5.http.cookie.Cookie cookie) {
-                        cookieStore.addCookie(CookieUtil.convert(cookie));
-                    }
-
-                    @Override
-                    public List<org.apache.hc.client5.http.cookie.Cookie> getCookies() {
-                        return cookieStore.getCookies().stream().map(CookieUtil::convert).collect(Collectors.toList());
-                    }
-
-                    @Override
-                    public boolean clearExpired(Date date) {
-                        return cookieStore.clearExpired(date);
-                    }
-
-                    @Override
-                    public void clear() {
-                        cookieStore.clear();
-                    }
-                };
-            }
-            builder.setDefaultCookieStore(httpClientCookieStore);
-        }
-
-        {
-            // 全局配置
-            RequestConfig defaultRequestConfig =
-                RequestConfig.custom().setCookieSpec(StandardCookieSpec.RELAXED).setExpectContinueEnabled(true)
-                    .setTargetPreferredAuthSchemes(Arrays.asList(StandardAuthScheme.BASIC, StandardAuthScheme.DIGEST))
-                    .setProxyPreferredAuthSchemes(Collections.singletonList(StandardAuthScheme.BASIC)).build();
-            builder.setDefaultRequestConfig(defaultRequestConfig);
-            logger.debug("默认全局请求配置为：[{}]", defaultRequestConfig);
-        }
-
-        CloseableHttpAsyncClient httpclient = builder.build();
-        httpclient.start();
-        this.httpClient = httpclient;
-        this.cookieStore = cookieStore;
-        this.id = String.valueOf(System.currentTimeMillis());
-        logger.debug("HttpClient初始化完毕");
-    }
-
-    /**
-     * 构建连接池管理器
-     *
-     * @param config
-     *            client配置
-     * @param sslcontext
-     *            安全上下文
-     * @return 连接池管理器
-     */
-    private AsyncClientConnectionManager buildAsyncClientConnectionManager(IHttpClientConfig config,
-        SSLContext sslcontext) {
-        // tls策略
-        TlsStrategy strategy = ClientTlsStrategyBuilder.create().setSslContext(sslcontext).build();
-
-        // 自定义DNS
-        DnsResolver dnsResolver = new SystemDefaultDnsResolver() {
-
-            @Override
-            public InetAddress[] resolve(final String host) throws UnknownHostException {
-                if ("localhost".equalsIgnoreCase(host)) {
-                    return new InetAddress[] {InetAddress.getLoopbackAddress()};
-                } else {
-                    return super.resolve(host);
-                }
-            }
-
-        };
-
-        PoolingAsyncClientConnectionManagerBuilder connectionManagerBuilder =
-            PoolingAsyncClientConnectionManagerBuilder.create();
-
-        // 连接池配置
-        // PoolConcurrencyPolicy.STRICT: 对于最大连接数严格限制（LAX使宽松的限制，可以提高并发）
-        // PoolReusePolicy.FIFO: 对于连接池里边的连接尽可能的公平复用，这样会使连接释放速度变慢，而LIFO则会使连接尽快释放
-        // TimeValue.NEG_ONE_SECOND: 表示连接池中连接的最大生存时间，小于等于0表示不限生存时间
-        // 暂停活动1S后验证连接
-        // 设置连接池能够保存的最大连接数量以及对每个站点保持最大的连接数量
-        // 当前设置：每个站点最大保持300个连接，连接池总共可以保持3000个连接
-        connectionManagerBuilder.setTlsStrategy(strategy).setConnPoolPolicy(PoolReusePolicy.FIFO)
-            .setPoolConcurrencyPolicy(PoolConcurrencyPolicy.STRICT)
-            .setValidateAfterInactivity(TimeValue.of(VALIDATE_INTERVAL, TimeUnit.SECONDS))
-            .setConnectionTimeToLive(TimeValue.NEG_ONE_SECOND).setMaxConnPerRoute(config.getDefaultMaxPerRoute())
-            .setMaxConnTotal(config.getMaxTotal()).setDnsResolver(dnsResolver)
-            .setSchemePortResolver(new DefaultSchemePortResolver());
-
-        return connectionManagerBuilder.build();
     }
 }
