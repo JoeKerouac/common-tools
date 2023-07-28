@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.net.http.config;
 
+import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.concurrent.ThreadFactory;
 
@@ -23,8 +24,6 @@ import javax.validation.constraints.NotNull;
 import com.github.joekerouac.common.tools.constant.Const;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 
 /**
  * HTTP客户端配置
@@ -34,9 +33,7 @@ import lombok.ToString;
  * @since 1.0.0
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-public final class IHttpClientConfig extends AbstractHttpConfig {
+public final class IHttpClientConfig {
 
     /**
      * 默认保持连接数
@@ -52,6 +49,16 @@ public final class IHttpClientConfig extends AbstractHttpConfig {
      * 默认缓冲区大小，单位byte
      */
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 8;
+
+    /**
+     * 默认传输超时时间
+     */
+    private static final int DEFAULT_SOCKET_TIMEOUT = 60 * 1000;
+
+    /**
+     * 数据传输超时时间，单位毫秒，默认一分钟
+     */
+    private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
 
     /**
      * HTTP1协议栈配置
@@ -126,4 +133,16 @@ public final class IHttpClientConfig extends AbstractHttpConfig {
      * http代理
      */
     private HttpProxy proxy;
+
+    /**
+     * 要绑定的本地网卡地址，允许为空
+     */
+    private InetAddress localAddress;
+
+    /**
+     * 全局请求配置
+     */
+    @NotNull
+    private IHttpConfig httpConfig = new IHttpConfig();
+
 }

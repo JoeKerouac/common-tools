@@ -579,9 +579,6 @@
         <!-- 确保类具有包声明，并且（可选）包名称是否与源文件的目录名称匹配。（这个检查一般都会通过） -->
         <module name="PackageDeclaration"/>
 
-        <!-- 禁止为参数赋值，这是一个糟糕的实践 -->
-        <module name="ParameterAssignment"/>
-
         <!-- 在方法中最多出现n个显式的return语句；return语句过多意味这方法过大或方法可能难以理解 -->
         <module name="ReturnCount">
             <!-- 非void返回值的方法（lambda方法）最多显式的出现5个return语句 -->

@@ -31,7 +31,7 @@ import com.github.joekerouac.common.tools.net.http.cookie.CookieUtil;
  */
 public class CookieStoreImpl implements CookieStore {
 
-    private BasicCookieStore basicCookieStore;
+    private final BasicCookieStore basicCookieStore;
 
     public CookieStoreImpl() {
         this.basicCookieStore = new BasicCookieStore();
