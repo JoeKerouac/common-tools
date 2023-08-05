@@ -11,8 +11,12 @@
 - 修改IHttpClient，支持外部传入自定义构建的`org.apache.hc.client5.http.impl.async.HttpAsyncClientBuilder`，以此支持`brave`（tracing，spring-cloud-sleuth默认使用brave实现trace，而brave要求代码侵入）；
 - 修改excel相关api，支持分批写入，而不是一次性全部写入；
 
-##v2.0.3
+## v2.0.3
 - PemUtil增加将rsa密钥以pem格式写出到文件；
 - 增加`AES_256_PKCS5Padding`支持；
 - 增加`com.github.joekerouac.common.tools.codec.HexCodec`，处理hex；
 - IHttpClient优化，当响应过大时将响应写入本地临时文件，防止发生OOM；
+
+## v2.1.0
+- HTTP工具重构；
+
