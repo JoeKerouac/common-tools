@@ -22,13 +22,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.jce.spec.ECPrivateKeySpec;
 import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.math.ec.ECPoint;
 
+import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.crypto.ECDHKeyExchangeSpi;
 import com.github.joekerouac.common.tools.crypto.constant.NamedCurve;
@@ -45,11 +45,9 @@ public class BCECDHKeyExchangeSpi extends AbstractECDHKeyExchangeSpi implements 
 
     private static final Map<String, X9ECParameters> CACHE = new ConcurrentHashMap<>();
 
-    private static final Provider BC_PROVIDER = new BouncyCastleProvider();
-
     @Override
     protected Provider provider() {
-        return BC_PROVIDER;
+        return Const.BC_PROVIDER;
     }
 
     @Override

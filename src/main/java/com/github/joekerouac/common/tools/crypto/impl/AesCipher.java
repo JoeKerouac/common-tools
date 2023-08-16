@@ -12,16 +12,23 @@
  */
 package com.github.joekerouac.common.tools.crypto.impl;
 
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
+import java.security.SecureRandom;
 import java.util.Objects;
 
-import javax.crypto.*;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
+import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.crypto.CipherSpi;
 import com.github.joekerouac.common.tools.crypto.constant.CipherDesc;
@@ -61,13 +68,12 @@ public class AesCipher implements CipherSpi {
     private int mode = -1;
 
     public AesCipher(CipherDesc cipherAlgorithm) {
-        // 注意，BouncyCastleProvider目前还有问题，需要继续测试
-        this(cipherAlgorithm, new BouncyCastleProvider());
+        this(cipherAlgorithm, Const.BC_PROVIDER);
     }
 
     public AesCipher(CipherDesc cipherAlgorithm, Provider provider) {
         this.cipherDesc = Objects.requireNonNull(cipherAlgorithm);
-        this.provider = provider == null ? new BouncyCastleProvider() : provider;
+        this.provider = provider == null ? Const.BC_PROVIDER : provider;
 
         try {
             this.cipher = Cipher.getInstance(cipherDesc.getCipherName(), this.provider);
