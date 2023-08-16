@@ -14,7 +14,10 @@ package com.github.joekerouac.common.tools.constant;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.Provider;
 import java.util.regex.Pattern;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -142,5 +145,12 @@ public class Const {
      * double的长度
      */
     public static final int DOUBLE_LEN = 64;
+
+    /**
+     * 全局共享provider，防止jdk bug导致的oom
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8168469">JDK-8168469</a>
+     */
+    public static final Provider BC_PROVIDER = new BouncyCastleProvider();
 
 }

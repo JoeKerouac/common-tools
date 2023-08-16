@@ -15,8 +15,7 @@ package com.github.joekerouac.common.tools.crypto.impl;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
+import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.crypto.DigestSpi;
 
 /**
@@ -37,7 +36,7 @@ public abstract class AbstractDigest implements DigestSpi {
     private void init(String algorithm) {
         try {
             this.algorithm = algorithm;
-            this.digest = MessageDigest.getInstance(algorithm, new BouncyCastleProvider());
+            this.digest = MessageDigest.getInstance(algorithm, Const.BC_PROVIDER);
         } catch (NoSuchAlgorithmException e) {
             throw new com.github.joekerouac.common.tools.crypto.exception.NoSuchAlgorithmException(algorithm, e);
         }
