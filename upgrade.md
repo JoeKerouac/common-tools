@@ -19,4 +19,5 @@
 
 ## v2.1.0
 - HTTP工具重构；
+- 修复jdk bug导致某些场景的OOM，详情参考：https://bugs.openjdk.org/browse/JDK-8168469
 
