@@ -12,18 +12,22 @@
  */
 package com.github.joekerouac.common.tools.crypto;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -31,16 +35,15 @@ import java.util.Base64;
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 
-import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.crypto.exception.CryptoException;
 import com.github.joekerouac.common.tools.io.IOUtils;
 import com.github.joekerouac.common.tools.string.StringUtils;
-import com.github.joekerouac.common.tools.util.Assert;
 
 import sun.security.util.KnownOIDs;
 
@@ -52,6 +55,8 @@ import sun.security.util.KnownOIDs;
  * @since 1.0.0
  */
 public class PemUtil {
+
+    private static final String CERT_NAME = "X.509";
 
     /**
      * 将密钥数据反序列化为对象
@@ -72,54 +77,57 @@ public class PemUtil {
      */
     @SuppressWarnings("unchecked")
     public static <T> T read(byte[] keyData, String keyAlgorithm)
-        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException {
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
         Object read = read(keyData);
 
         if (read != null) {
             return (T)read;
         }
 
-        // 如果不是pem编码的则返回null，此时可能是X.509编码的公钥，也可能是PKCS#8编码的私钥
-        KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
-        try {
-            read = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyData));
-        } catch (Throwable throwable) {
-            // 忽略异常，继续尝试其他方案
+        if (CERT_NAME.equals(keyAlgorithm)) {
+            try {
+                CertificateFactory certificateFactory = CertificateFactory.getInstance(CERT_NAME);
+                return (T)certificateFactory.generateCertificate(new ByteArrayInputStream(keyData));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+
+            try {
+                CertificateFactory certificateFactory = CertificateFactory.getInstance(CERT_NAME);
+                return (T)certificateFactory
+                    .generateCertificate(new ByteArrayInputStream(Base64.getDecoder().decode(keyData)));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+        } else {
+            // 如果不是pem编码的则返回null，此时可能是X.509编码的公钥，也可能是PKCS#8编码的私钥
+            KeyFactory keyFactory = KeyFactory.getInstance(keyAlgorithm);
+            try {
+                return (T)keyFactory.generatePrivate(new PKCS8EncodedKeySpec(keyData));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+
+            try {
+                return (T)keyFactory.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(keyData)));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+
+            try {
+                return (T)keyFactory.generatePublic(new X509EncodedKeySpec(keyData));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+
+            try {
+                return (T)keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(keyData)));
+            } catch (Throwable throwable) {
+                // 忽略异常，继续尝试其他方案
+            }
+
         }
-
-        if (read != null) {
-            return (T)read;
-        }
-
-        try {
-            read = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(keyData)));
-        } catch (Throwable throwable) {
-            // 忽略异常，继续尝试其他方案
-        }
-
-        if (read != null) {
-            return (T)read;
-        }
-
-        try {
-            read = keyFactory.generatePublic(new X509EncodedKeySpec(keyData));
-        } catch (Throwable throwable) {
-            // 忽略异常，继续尝试其他方案
-        }
-
-        if (read != null) {
-            return (T)read;
-        }
-
-        try {
-            read = keyFactory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(keyData)));
-        } catch (Throwable throwable) {
-            // 忽略异常，继续尝试其他方案
-        }
-
-        Assert.notNull(read, "提供的密钥信息有误，读取失败", ExceptionProviderConst.IllegalArgumentExceptionProvider);
-
-        return (T)read;
+        throw new IllegalArgumentException("提供的密钥信息有误，读取失败");
     }
 
     /**
@@ -138,7 +146,7 @@ public class PemUtil {
      *             InvalidKeySpecException
      */
     public static <T> T read(InputStream inputStream)
-        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException {
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
         return read(IOUtils.read(inputStream, true));
     }
 
@@ -159,7 +167,7 @@ public class PemUtil {
      */
     @SuppressWarnings("unchecked")
     public static <T> T read(byte[] data)
-        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException {
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
         PEMParser parser = new PEMParser(new StringReader(new String(data, StandardCharsets.UTF_8)));
         Object read;
         try {
@@ -212,6 +220,19 @@ public class PemUtil {
             } else {
                 read = publicKey == null ? privateKey : publicKey;
             }
+        } else if (read instanceof X509CertificateHolder) {
+            X509CertificateHolder certificateHolder = (X509CertificateHolder)read;
+            byte[] certificateData;
+            try {
+                certificateData = certificateHolder.getEncoded();
+            } catch (IOException e) {
+                // 理论上不可能
+                throw new RuntimeException(e);
+            }
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(certificateData);
+
+            CertificateFactory certificateFactory = CertificateFactory.getInstance(CERT_NAME);
+            read = certificateFactory.generateCertificate(inputStream);
         }
 
         return (T)read;
@@ -219,18 +240,28 @@ public class PemUtil {
     }
 
     /**
-     * 将密钥写出为pem文件
+     * 将密钥或者证书写出为pem文件
      * 
      * @param key
-     *            密钥
+     *            要写出的数据，可以是rsa公私钥，也可以是证书
      * @return pem文件，例如：以-----BEGIN PRIVATE KEY-----开头
      */
-    public static String write(Key key) {
+    public static String write(Object key) {
         String type;
+        byte[] encode;
         if (key instanceof PublicKey) {
             type = "PUBLIC KEY";
+            encode = ((PublicKey)key).getEncoded();
         } else if (key instanceof PrivateKey) {
             type = "PRIVATE KEY";
+            encode = ((PrivateKey)key).getEncoded();
+        } else if (key instanceof Certificate) {
+            type = "CERTIFICATE";
+            try {
+                encode = ((Certificate)key).getEncoded();
+            } catch (CertificateEncodingException e) {
+                throw new RuntimeException(e);
+            }
         } else {
             throw new UnsupportedOperationException(StringUtils.format("不支持的密钥类型： [{}]", key.getClass()));
         }
@@ -238,7 +269,7 @@ public class PemUtil {
         StringWriter stringWriter = new StringWriter();
         PemWriter pemWriter = new PemWriter(stringWriter);
         try {
-            pemWriter.writeObject(new PemObject(type, key.getEncoded()));
+            pemWriter.writeObject(new PemObject(type, encode));
             pemWriter.flush();
             pemWriter.close();
         } catch (IOException e) {
