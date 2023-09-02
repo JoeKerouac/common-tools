@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.github.joekerouac.common.tools.constant.Const;
-import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
+import com.github.joekerouac.common.tools.exception.CommonException;
 import com.github.joekerouac.common.tools.log.Logger;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
@@ -45,11 +45,16 @@ public class CommandConsoleImpl implements CommandConsole {
     private final Map<String, String> env;
 
     /**
+     * 命令行字符集
+     */
+    private final String charset;
+
+    /**
      * 当前执行目录
      */
     private File baseDir;
 
-    CommandConsoleImpl(Map<String, String> env, File baseDir, Logger logger) {
+    CommandConsoleImpl(Map<String, String> env, File baseDir, Logger logger, String charset) {
         Assert.argNotNull(env, "env");
         Assert.argNotNull(baseDir, "baseDir");
         Assert.argNotNull(logger, "logger");
@@ -57,6 +62,8 @@ public class CommandConsoleImpl implements CommandConsole {
         this.env = env;
         this.baseDir = baseDir;
         this.logger = logger;
+        String defaultCharset = Const.IS_WINDOWS ? "GBK" : "UTF-8";
+        this.charset = StringUtils.getOrDefault(charset, defaultCharset);
     }
 
     @Override
@@ -65,10 +72,8 @@ public class CommandConsoleImpl implements CommandConsole {
             logger.debug("准备执行命令[{}]", command);
             Process process = createProcess(command, env);
 
-            BufferedReader reader =
-                new BufferedReader(new InputStreamReader(process.getInputStream(), Const.DEFAULT_CHARSET));
-            BufferedReader errReader =
-                new BufferedReader(new InputStreamReader(process.getErrorStream(), Const.DEFAULT_CHARSET));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), charset));
+            BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), charset));
 
             // 等待执行结束
             try {

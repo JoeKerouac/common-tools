@@ -40,7 +40,7 @@ public class CommandConsoleFactory {
      * @return 命令控制台
      */
     public static CommandConsole create(Logger logger) {
-        return create(System.getenv(), new File(Const.USER_HOME), logger);
+        return create(System.getenv(), new File(Const.USER_HOME), logger, null);
     }
 
     /**
@@ -53,7 +53,7 @@ public class CommandConsoleFactory {
      * @return 命令控制台
      */
     public static CommandConsole create(File baseDir, Logger logger) {
-        return create(System.getenv(), baseDir, logger);
+        return create(System.getenv(), baseDir, logger, null);
     }
 
     /**
@@ -66,7 +66,7 @@ public class CommandConsoleFactory {
      * @return 命令控制台
      */
     public static CommandConsole create(Map<String, String> env, Logger logger) {
-        return create(env, new File(Const.USER_HOME), logger);
+        return create(env, new File(Const.USER_HOME), logger, null);
     }
 
     /**
@@ -81,10 +81,27 @@ public class CommandConsoleFactory {
      * @return 命令控制台
      */
     public static CommandConsole create(Map<String, String> env, File baseDir, Logger logger) {
+        return create(env, baseDir, logger, null);
+    }
+
+    /**
+     * 创建一个命令控制台，指定环境变量、工作目录
+     *
+     * @param env
+     *            环境变量，不能为空
+     * @param baseDir
+     *            工作目录，不能为空
+     * @param logger
+     *            日志记录
+     * @param charset
+     *            命令行字符集
+     * @return 命令控制台
+     */
+    public static CommandConsole create(Map<String, String> env, File baseDir, Logger logger, String charset) {
         Assert.argNotNull(env, "env");
         Assert.argNotNull(baseDir, "baseDir");
 
-        return new CommandConsoleImpl(env, baseDir, logger);
+        return new CommandConsoleImpl(env, baseDir, logger, charset);
     }
 
 }
