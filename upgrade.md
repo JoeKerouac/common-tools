@@ -21,3 +21,6 @@
 - HTTP工具重构；
 - 修复jdk bug导致某些场景的OOM，详情参考：https://bugs.openjdk.org/browse/JDK-8168469
 
+## v2.1.1
+- excel工具优化，支持map
+

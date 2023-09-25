@@ -15,7 +15,16 @@ package com.github.joekerouac.common.tools.poi;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -27,7 +36,12 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.exception.ExcelClosedException;
-import com.github.joekerouac.common.tools.poi.data.*;
+import com.github.joekerouac.common.tools.poi.data.BooleanDataWriter;
+import com.github.joekerouac.common.tools.poi.data.CalendarDataWriter;
+import com.github.joekerouac.common.tools.poi.data.DateDataWriter;
+import com.github.joekerouac.common.tools.poi.data.EnumDataWriter;
+import com.github.joekerouac.common.tools.poi.data.NumberDataWriter;
+import com.github.joekerouac.common.tools.poi.data.StringDataWriter;
 import com.github.joekerouac.common.tools.reflect.ReflectUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
@@ -317,7 +331,7 @@ public class ExcelWriter<DATA> {
 
         List<Writer<?>> titles = null;
         if (hasTitle) {
-            LOGGER.info("当前需要标题列表，构建...");
+            LOGGER.debug("当前需要标题列表，构建...");
             titles = new ArrayList<>(writeFields.size());
             for (Field field : writeFields) {
                 ExcelColumn column = field.getAnnotation(ExcelColumn.class);
@@ -343,6 +357,81 @@ public class ExcelWriter<DATA> {
                     LOGGER.warn("[{}]中字段[{}]不能读取", dataValue, field.getName(), e);
                     columnDatas.add(null);
                 }
+            }
+        }
+
+        LOGGER.debug("要写入的数据为：[{}]", writeDatas);
+        writeToExcel(titles, writeDatas, hasTitle, transverse, sheetName);
+    }
+
+    /**
+     * 写出到excel，写出字段顺序按照数据列表中第一行数据的字段顺序，如果写出标题，并且某个字段的标题不存在，那么将使用字段名作为标题
+     *
+     * @param titleMap
+     *            标题，key是数据字段名，value是对应的标题名，为null表示不写出标题
+     * @param dataList
+     *            数据列表，每个map是一行数据，所有map结构应该一致，如果写出需要顺序，则需要使用有序map，key是字段名，value是字段值； sheetName
+     */
+    public void writeToExcel(Map<String, String> titleMap, List<Map<String, Object>> dataList) {
+        writeToExcel(titleMap, dataList, transverse, DEFAULT_SHEET_NAME);
+    }
+
+    /**
+     * 写出到excel，写出字段顺序按照数据列表中第一行数据的字段顺序，如果写出标题，并且某个字段的标题不存在，那么将使用字段名作为标题
+     *
+     * @param titleMap
+     *            标题，key是数据字段名，value是对应的标题名，为null表示不写出标题
+     * @param dataList
+     *            数据列表，每个map是一行数据，所有map结构应该一致，如果写出需要顺序，则需要使用有序map，key是字段名，value是字段值； sheetName
+     * @param sheetName
+     *            sheetName
+     */
+    public void writeToExcel(Map<String, String> titleMap, List<Map<String, Object>> dataList, String sheetName) {
+        writeToExcel(titleMap, dataList, transverse, sheetName);
+    }
+
+    /**
+     * 写出到excel，写出字段顺序按照数据列表中第一行数据的字段顺序，如果写出标题，并且某个字段的标题不存在，那么将使用字段名作为标题
+     * 
+     * @param titleMap
+     *            标题，key是数据字段名，value是对应的标题名，为null表示不写出标题
+     * @param dataList
+     *            数据列表，每个map是一行数据，所有map结构应该一致，如果写出需要顺序，则需要使用有序map，key是字段名，value是字段值；
+     * @param transverse
+     *            是否横向写入（一列对应一个pojo，标题在第一列），默认false（一行一个pojo，标题在第一行）
+     * @param sheetName
+     *            sheetName
+     */
+    public void writeToExcel(Map<String, String> titleMap, List<Map<String, Object>> dataList, boolean transverse,
+        String sheetName) {
+        if (CollectionUtil.isEmpty(dataList) || CollectionUtil.isEmpty(dataList.get(0))) {
+            LOGGER.debug("当前要写出的数据为空");
+            return;
+        }
+
+        Set<String> fields = dataList.get(0).keySet();
+        List<Map<String, Object>> newDataList =
+            dataList.parallelStream().filter(CollectionUtil::isNotEmpty).collect(Collectors.toList());
+
+        List<Writer<?>> titles;
+        if (titleMap != null) {
+            LOGGER.debug("当前需要标题列表，构建...");
+            titles = new ArrayList<>();
+            fields.forEach(field -> {
+                String title = titleMap.get(field);
+                titles.add(build(StringUtils.getOrDefault(title, field)));
+            });
+        } else {
+            titles = null;
+        }
+
+        List<List<Writer<?>>> writeDatas = new ArrayList<>(newDataList.size());
+        for (Map<String, Object> dataValue : newDataList) {
+            List<Writer<?>> columnDatas = new ArrayList<>(fields.size());
+            // 加入
+            writeDatas.add(columnDatas);
+            for (String field : fields) {
+                columnDatas.add(build(dataValue.get(field)));
             }
         }
 

@@ -13,7 +13,11 @@
 package com.github.joekerouac.common.tools.collection;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import lombok.AccessLevel;
@@ -146,6 +150,17 @@ public class CollectionUtil {
      */
     public static <T> boolean isNotEmpty(T[] array) {
         return size(array) > 0;
+    }
+
+    /**
+     * 安全判断集合是否为非空
+     *
+     * @param map
+     *            map集合
+     * @return 返回true表示非空
+     */
+    public static boolean isNotEmpty(Map<?, ?> map) {
+        return size(map) != 0;
     }
 
     /**
