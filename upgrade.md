@@ -24,3 +24,5 @@
 ## v2.1.1
 - excel工具优化，支持map
 
+## v2.1.2
+- 将`sun.security.util.KnownOIDs`复制到项目中；PS: 该类是`adoptopenjdk`中的类，如果使用`Oracle JDK`可能没有该类；

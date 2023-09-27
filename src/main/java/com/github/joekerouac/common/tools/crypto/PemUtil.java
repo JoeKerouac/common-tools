@@ -45,8 +45,6 @@ import com.github.joekerouac.common.tools.crypto.exception.CryptoException;
 import com.github.joekerouac.common.tools.io.IOUtils;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
-import sun.security.util.KnownOIDs;
-
 /**
  * PEM格式文件工具
  *
