@@ -26,3 +26,7 @@
 
 ## v2.1.2
 - 将`sun.security.util.KnownOIDs`复制到项目中；PS: 该类是`adoptopenjdk`中的类，如果使用`Oracle JDK`可能没有该类；
+
+## v2.1.3
+- 修复http工具未正确设置`Content-Type`问题；
+
