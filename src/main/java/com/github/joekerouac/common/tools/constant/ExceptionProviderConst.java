@@ -24,6 +24,11 @@ import com.github.joekerouac.common.tools.function.ExceptionProvider;
 public final class ExceptionProviderConst {
 
     /**
+     * RuntimeException
+     */
+    public static final ExceptionProvider RuntimeExceptionProvider = ((cause, msg) -> new RuntimeException(msg, cause));
+
+    /**
      * IllegalArgumentException
      */
     public static final ExceptionProvider IllegalArgumentExceptionProvider =

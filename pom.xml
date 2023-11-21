@@ -7,7 +7,7 @@
     <packaging>jar</packaging>
     <name>common-tools</name>
     <description>各种常用工具</description>
-    <url>https://github.com/JoeKerouac/commons-tools</url>
+    <url>https://github.com/JoeKerouac/common-tools</url>
 
     <licenses>
         <license>
@@ -17,9 +17,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/JoeKerouac/commons-tools</url>
-        <connection>scm:git:https://github.com/JoeKerouac/commons-tools.git</connection>
-        <developerConnection>scm:git:https://github.com/JoeKerouac/commons-tools.git</developerConnection>
+        <url>https://github.com/JoeKerouac/common-tools</url>
+        <connection>scm:git:https://github.com/JoeKerouac/common-tools.git</connection>
+        <developerConnection>scm:git:https://github.com/JoeKerouac/common-tools.git</developerConnection>
     </scm>
 
     <developers>
