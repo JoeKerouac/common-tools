@@ -30,3 +30,6 @@
 ## v2.1.3
 - 修复http工具未正确设置`Content-Type`问题；
 
+## v2.1.4
+- 升级apache httpclient; `5.0.3` -> `5.2.1`
+
