@@ -65,6 +65,7 @@ import com.github.joekerouac.common.tools.net.http.config.IHttpClientConfig;
 import com.github.joekerouac.common.tools.net.http.cookie.CookieStore;
 import com.github.joekerouac.common.tools.net.http.cookie.CookieUtil;
 import com.github.joekerouac.common.tools.net.http.cookie.impl.CookieStoreImpl;
+import com.github.joekerouac.common.tools.net.http.dns.IDnsResolver;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.thread.NamedThreadFactory;
 import com.github.joekerouac.common.tools.thread.UncaughtExceptionHandlerThreadFactory;
@@ -353,6 +354,7 @@ public class HttpClientUtil {
         TlsStrategy strategy = ClientTlsStrategyBuilder.create().setSslContext(sslcontext).build();
 
         // 自定义DNS
+        IDnsResolver iDnsResolver = config.getDnsResolver();
         DnsResolver dnsResolver = new SystemDefaultDnsResolver() {
 
             @Override
@@ -360,10 +362,15 @@ public class HttpClientUtil {
                 if ("localhost".equalsIgnoreCase(host)) {
                     return new InetAddress[] {InetAddress.getLoopbackAddress()};
                 } else {
-                    return super.resolve(host);
+                    return iDnsResolver == null ? super.resolve(host) : iDnsResolver.resolve(host);
                 }
             }
 
+            @Override
+            public String resolveCanonicalHostname(String host) throws UnknownHostException {
+                return iDnsResolver == null ? super.resolveCanonicalHostname(host)
+                    : iDnsResolver.resolveCanonicalHostname(host);
+            }
         };
 
         PoolingAsyncClientConnectionManagerBuilder connectionManagerBuilder =

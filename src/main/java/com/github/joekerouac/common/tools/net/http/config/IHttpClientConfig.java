@@ -22,6 +22,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import com.github.joekerouac.common.tools.constant.Const;
+import com.github.joekerouac.common.tools.net.http.dns.IDnsResolver;
 
 import lombok.Data;
 
@@ -138,6 +139,11 @@ public final class IHttpClientConfig {
      * 要绑定的本地网卡地址，允许为空
      */
     private InetAddress localAddress;
+
+    /**
+     * dns解析器，允许为空
+     */
+    private IDnsResolver dnsResolver;
 
     /**
      * 全局请求配置

@@ -32,4 +32,4 @@
 
 ## v2.1.4
 - 升级apache httpclient; `5.0.3` -> `5.2.1`
-
+- httpclient支持自定义DNS
