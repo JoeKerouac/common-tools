@@ -13,66 +13,60 @@
 package com.github.joekerouac.common.tools.codec.json.databind;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Optional;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
-import com.fasterxml.jackson.databind.deser.std.StringDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
+ * 用于处理LocalDateTime
+ * 
  * @author JoeKerouac
- * @date 2023-05-22 11:22
- * @since 2.0.3
+ * @date 2022-10-14 14:37:00
+ * @since 1.0.0
  */
-public class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime>
-    implements SerializeRegister, ContextualDeserializer {
+public class DateSerializer extends JsonSerializer<Date> implements SerializeRegister, ContextualSerializer {
 
     private final String format;
 
-    public LocalDateTimeDeserializer() {
+    public DateSerializer() {
         this(DateUtil.BASE);
     }
 
-    public LocalDateTimeDeserializer(String format) {
+    public DateSerializer(String format) {
         this.format = format;
     }
 
     @Override
-    public LocalDateTime deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-        throws IOException, JsonProcessingException {
-        String datetime = StringDeserializer.instance.deserialize(jsonParser, deserializationContext);
-        if (StringUtils.isBlank(datetime)) {
-            return null;
-        }
-
-        return DateUtil.parseToLocalDateTime(datetime, format);
+    public void serialize(final Date value, final JsonGenerator gen, final SerializerProvider serializers)
+        throws IOException {
+        gen.writeString(DateUtil.getFormatDate(value, format));
     }
 
     @Override
-    public void register(SimpleModule module) {
-        module.addDeserializer(LocalDateTime.class, this);
+    public void register(final SimpleModule module) {
+        module.addSerializer(Date.class, this);
     }
 
     @Override
-    public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
-        BeanProperty beanProperty) throws JsonMappingException {
+    public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
+        throws JsonMappingException {
         DateTimeFormat annotation =
             Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
         if (annotation == null) {
             return this;
         }
 
-        return new LocalDateTimeDeserializer(
-            StringUtils.getOrDefault(annotation.deserializer(), StringUtils.getOrDefault(annotation.value(), format)));
+        return new DateSerializer(
+            StringUtils.getOrDefault(annotation.serializer(), StringUtils.getOrDefault(annotation.value(), format)));
     }
 }

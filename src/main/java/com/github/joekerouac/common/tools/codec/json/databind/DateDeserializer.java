@@ -13,7 +13,7 @@
 package com.github.joekerouac.common.tools.codec.json.databind;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Optional;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -34,33 +34,32 @@ import com.github.joekerouac.common.tools.string.StringUtils;
  * @date 2023-05-22 11:22
  * @since 2.0.3
  */
-public class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime>
-    implements SerializeRegister, ContextualDeserializer {
+public class DateDeserializer extends JsonDeserializer<Date> implements SerializeRegister, ContextualDeserializer {
 
     private final String format;
 
-    public LocalDateTimeDeserializer() {
+    public DateDeserializer() {
         this(DateUtil.BASE);
     }
 
-    public LocalDateTimeDeserializer(String format) {
+    public DateDeserializer(String format) {
         this.format = format;
     }
 
     @Override
-    public LocalDateTime deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+    public Date deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException, JsonProcessingException {
         String datetime = StringDeserializer.instance.deserialize(jsonParser, deserializationContext);
         if (StringUtils.isBlank(datetime)) {
             return null;
         }
 
-        return DateUtil.parseToLocalDateTime(datetime, format);
+        return DateUtil.parse(datetime, format);
     }
 
     @Override
     public void register(SimpleModule module) {
-        module.addDeserializer(LocalDateTime.class, this);
+        module.addDeserializer(Date.class, this);
     }
 
     @Override
@@ -72,7 +71,7 @@ public class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime>
             return this;
         }
 
-        return new LocalDateTimeDeserializer(
+        return new DateDeserializer(
             StringUtils.getOrDefault(annotation.deserializer(), StringUtils.getOrDefault(annotation.value(), format)));
     }
 }

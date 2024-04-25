@@ -18,7 +18,7 @@ import java.util.Optional;
 import org.dom4j.Element;
 
 import com.github.joekerouac.common.tools.codec.common.CommonLocalDateTimeDeserializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.codec.xml.XmlDeserializer;
 import com.github.joekerouac.common.tools.reflect.bean.PropertyEditor;
 
@@ -52,8 +52,8 @@ public class LocalDateTimeDeserializer implements XmlDeserializer<LocalDateTime>
 
     @Override
     public LocalDateTimeDeserializer createContextual(PropertyEditor propertyEditor) {
-        CommonLocalDateTimeDeserializer contextual = commonLocalDateTimeDeserializer.createContextual(() -> Optional
-            .ofNullable(propertyEditor).map(p -> p.getAnnotation(LocalDateTimeFormat.class)).orElse(null));
+        CommonLocalDateTimeDeserializer contextual = commonLocalDateTimeDeserializer.createContextual(
+            () -> Optional.ofNullable(propertyEditor).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null));
         return new LocalDateTimeDeserializer(contextual);
     }
 

@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
@@ -60,8 +60,8 @@ public abstract class AbstractDateDeserializer<T, M extends AbstractDateDeserial
     }
 
     @SuppressWarnings("unchecked")
-    public M createContextual(Supplier<LocalDateTimeFormat> localDateTimeFormatSupplier) {
-        LocalDateTimeFormat annotation = localDateTimeFormatSupplier.get();
+    public M createContextual(Supplier<DateTimeFormat> localDateTimeFormatSupplier) {
+        DateTimeFormat annotation = localDateTimeFormatSupplier.get();
 
         if (annotation == null) {
             return (M)this;

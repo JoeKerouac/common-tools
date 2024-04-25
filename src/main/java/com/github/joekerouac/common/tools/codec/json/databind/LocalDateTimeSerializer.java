@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
@@ -61,8 +61,8 @@ public class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime>
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
         throws JsonMappingException {
-        LocalDateTimeFormat annotation =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(LocalDateTimeFormat.class)).orElse(null);
+        DateTimeFormat annotation =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
         if (annotation == null) {
             return this;
         }

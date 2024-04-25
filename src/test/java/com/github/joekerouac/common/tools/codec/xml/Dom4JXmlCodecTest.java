@@ -28,7 +28,7 @@ import java.util.Set;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 import lombok.Data;
@@ -225,17 +225,17 @@ public class Dom4JXmlCodecTest {
 
         private LocalDateTime localDateTime;
 
-        @LocalDateTimeFormat("yyyyMMddHHmmss")
+        @DateTimeFormat("yyyyMMddHHmmss")
         private LocalDateTime localDateTime1;
 
         private LocalDate localDate;
 
-        @LocalDateTimeFormat("yyyy-MM-dd")
+        @DateTimeFormat("yyyy-MM-dd")
         private LocalDate localDate1;
 
         private LocalTime localTime;
 
-        @LocalDateTimeFormat("HH:mm:ss")
+        @DateTimeFormat("HH:mm:ss")
         private LocalTime localTime1;
     }
 

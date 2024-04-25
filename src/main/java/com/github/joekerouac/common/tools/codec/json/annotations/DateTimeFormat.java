@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 @Documented
-public @interface LocalDateTimeFormat {
+public @interface DateTimeFormat {
 
     /**
      * 日期格式，用于json序列化与反序列化

@@ -18,6 +18,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Map;
 import java.util.Random;
 
@@ -25,7 +26,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.github.joekerouac.common.tools.codec.json.annotations.LocalDateTimeFormat;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
 import com.github.joekerouac.common.tools.io.InMemoryFileOutputStream;
@@ -100,16 +101,6 @@ public class JacksonJsonCodecTest {
         Assert.assertEquals(holder, objRead);
     }
 
-    @Test(dataProvider = "testLocalDateTimeProvider")
-    public void testLocalDateTime(DateObj dateObj, String expect) {
-        JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
-        byte[] write = jacksonJsonSerialization.write(dateObj, StandardCharsets.UTF_8);
-        Map<String, String> map = jacksonJsonSerialization.read(write, StandardCharsets.UTF_8,
-            new AbstractTypeReference<Map<String, String>>() {});
-        String date = map.get("date");
-        Assert.assertEquals(date, expect);
-    }
-
     @DataProvider(name = "testResourceDataProvider")
     public Object[][] testResourceDataProvider() {
         JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
@@ -118,15 +109,43 @@ public class JacksonJsonCodecTest {
             new FileResource("/root/test/test.jar"), new ClassPathResource("sql-error-codes.xml"))}};
     }
 
+    @Test(dataProvider = "testLocalDateTimeProvider")
+    public void testLocalDateTime(LocalDateTimeObj localDateTimeObj, String expect) {
+        JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
+        byte[] write = jacksonJsonSerialization.write(localDateTimeObj, StandardCharsets.UTF_8);
+        Map<String, String> map = jacksonJsonSerialization.read(write, StandardCharsets.UTF_8,
+            new AbstractTypeReference<Map<String, String>>() {});
+        String date = map.get("date");
+        Assert.assertEquals(date, expect);
+    }
+
     @DataProvider(name = "testLocalDateTimeProvider")
     public Object[][] testLocalDateTimeProvider() {
         LocalDateTime now = LocalDateTime.now();
+        return new Object[][] {{new LocalDateTimeObj1(now), DateUtil.getFormatDate(now, DateUtil.BASE)},
+            {new LocalDateTimeObj2(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH:mm")},
+            {new LocalDateTimeObj3(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH")}};
+    }
+
+    @Test(dataProvider = "testDateProvider")
+    public void testDate(DateObj dateObj, String expect) {
+        JacksonJsonCodec jacksonJsonSerialization = new JacksonJsonCodec();
+        byte[] write = jacksonJsonSerialization.write(dateObj, StandardCharsets.UTF_8);
+        Map<String, String> map = jacksonJsonSerialization.read(write, StandardCharsets.UTF_8,
+            new AbstractTypeReference<Map<String, String>>() {});
+        String date = map.get("date");
+        Assert.assertEquals(date, expect);
+    }
+
+    @DataProvider(name = "testDateProvider")
+    public Object[][] testDateProvider() {
+        Date now = new Date();
         return new Object[][] {{new DateObj1(now), DateUtil.getFormatDate(now, DateUtil.BASE)},
             {new DateObj2(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH:mm")},
             {new DateObj3(now), DateUtil.getFormatDate(now, "yyyy-MM-dd HH")}};
     }
 
-    public interface DateObj {
+    public interface LocalDateTimeObj {
 
         LocalDateTime getDate();
     }
@@ -134,9 +153,40 @@ public class JacksonJsonCodecTest {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class DateObj1 implements DateObj {
+    public static class LocalDateTimeObj1 implements LocalDateTimeObj {
 
         private LocalDateTime date;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class LocalDateTimeObj2 implements LocalDateTimeObj {
+
+        @DateTimeFormat("yyyy-MM-dd HH:mm")
+        private LocalDateTime date;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class LocalDateTimeObj3 implements LocalDateTimeObj {
+
+        @DateTimeFormat(serializer = "yyyy-MM-dd HH")
+        private LocalDateTime date;
+    }
+
+    public interface DateObj {
+
+        Date getDate();
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class DateObj1 implements DateObj {
+
+        private Date date;
     }
 
     @Data
@@ -144,8 +194,8 @@ public class JacksonJsonCodecTest {
     @NoArgsConstructor
     public static class DateObj2 implements DateObj {
 
-        @LocalDateTimeFormat("yyyy-MM-dd HH:mm")
-        private LocalDateTime date;
+        @DateTimeFormat("yyyy-MM-dd HH:mm")
+        private Date date;
     }
 
     @Data
@@ -153,8 +203,8 @@ public class JacksonJsonCodecTest {
     @NoArgsConstructor
     public static class DateObj3 implements DateObj {
 
-        @LocalDateTimeFormat(serializer = "yyyy-MM-dd HH")
-        private LocalDateTime date;
+        @DateTimeFormat(serializer = "yyyy-MM-dd HH")
+        private Date date;
     }
 
     @Data
