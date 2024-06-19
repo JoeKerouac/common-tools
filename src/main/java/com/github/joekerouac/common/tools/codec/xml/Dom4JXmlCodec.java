@@ -398,6 +398,40 @@ public class Dom4JXmlCodec implements Codec {
      * @return 解析结果
      */
     public String toXml(Object source, Charset charset, String defaultRootName, boolean hasNull, boolean pretty) {
+        Element root = toXmlElement(source, defaultRootName, hasNull);
+
+        OutputFormat format = pretty ? OutputFormat.createPrettyPrint() : new OutputFormat();
+        format.setEncoding(charset.name());
+        StringWriter out = new StringWriter();
+
+        try {
+            XMLWriter writer = new XMLWriter(out, format);
+
+            if (writeHeader) {
+                Document document = DocumentHelper.createDocument(root);
+                writer.write(document);
+            } else {
+                writer.write(root);
+            }
+            writer.flush();
+            return out.toString();
+        } catch (Exception e) {
+            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, "序列化异常", e);
+        }
+    }
+
+    /**
+     * 将pojo构建为文档
+     *
+     * @param source
+     *            bean
+     * @param defaultRootName
+     *            根节点名称，如果为null则会尝试使用默认值
+     * @param hasNull
+     *            是否包含null元素（true：包含）
+     * @return 构建的文档节点
+     */
+    public Element toXmlElement(Object source, String defaultRootName, boolean hasNull) {
         if (source == null) {
             LOGGER.warn("传入的source为null，返回null");
             return null;
@@ -419,25 +453,7 @@ public class Dom4JXmlCodec implements Codec {
         buildDocument(root, source, source.getClass(), !hasNull);
         Long end = System.currentTimeMillis();
         LOGGER.debug("解析xml用时" + (end - start) + "ms");
-
-        OutputFormat format = pretty ? OutputFormat.createPrettyPrint() : new OutputFormat();
-        format.setEncoding(charset.name());
-        StringWriter out = new StringWriter();
-
-        try {
-            XMLWriter writer = new XMLWriter(out, format);
-
-            if (writeHeader) {
-                Document document = DocumentHelper.createDocument(root);
-                writer.write(document);
-            } else {
-                writer.write(root);
-            }
-            writer.flush();
-            return out.toString();
-        } catch (Exception e) {
-            throw new SerializeException(ErrorCodeEnum.SERIAL_EXCEPTION, "序列化异常", e);
-        }
+        return root;
     }
 
     /**
@@ -527,7 +543,7 @@ public class Dom4JXmlCodec implements Codec {
             }
 
             // 判断字段对应的是否是属性
-            if (xmlNode != null && xmlNode.isAttribute()) {
+            if (xmlNode != null && (xmlNode.isAttribute() || xmlNode.isNamespace())) {
                 // 判断是否是父节点的属性
                 if (StringUtils.isBlank(xmlNode.name())) {
                     // 如果是父节点那么删除之前添加的
@@ -540,14 +556,24 @@ public class Dom4JXmlCodec implements Codec {
                     // 这里要判断valueObj是否等于null，因为如果不忽略null的话这里是有可能传过来一个null值的
                     if (valueObj != null) {
                         Map<String, String> attrs = (Map<String, String>)valueObj;
-                        attrs.forEach(finalNode::addAttribute);
+                        attrs.forEach((key, value) -> {
+                            if (xmlNode.isNamespace()) {
+                                finalNode.addNamespace(key, value);
+                            } else {
+                                finalNode.addAttribute(key, value);
+                            }
+                        });
                     }
                 } else {
                     // 属性值，属性值只能是简单值
                     String attrValue = valueObj == null ? "" : String.valueOf(valueObj);
 
                     // 为属性对应的节点添加属性
-                    finalNode.addAttribute(attrName, attrValue);
+                    if (xmlNode.isNamespace()) {
+                        finalNode.addNamespace(xmlNode.nsPrefix(), attrValue);
+                    } else {
+                        finalNode.addAttribute(attrName, attrValue);
+                    }
                 }
             } else if (type == null) {
                 LOGGER.debug("当前不知道节点[{}]的类型，忽略该节点", k);
@@ -649,8 +675,8 @@ public class Dom4JXmlCodec implements Codec {
 
     @Override
     public void write(Object data, Charset resultCharset, OutputStream outputStream) {
-        byte[] xmlData =
-            toXml(data, resultCharset).getBytes(resultCharset == null ? StandardCharsets.UTF_8 : resultCharset);
+        Charset charset = resultCharset == null ? StandardCharsets.UTF_8 : resultCharset;
+        byte[] xmlData = toXml(data, charset).getBytes(charset);
         try {
             outputStream.write(xmlData);
             outputStream.flush();

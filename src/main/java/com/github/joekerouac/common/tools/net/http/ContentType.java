@@ -30,6 +30,11 @@ public final class ContentType {
     public static final String CONTENT_TYPE_JSON = "application/json";
 
     /**
+     * xml类型数据
+     */
+    public static final String CONTENT_TYPE_XML = "application/xml";
+
+    /**
      * form表单类型数据
      */
     public static final String CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";

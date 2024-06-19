@@ -33,3 +33,8 @@
 ## v2.1.4
 - 升级apache httpclient; `5.0.3` -> `5.2.1`
 - httpclient支持自定义DNS
+
+## v2.4.5
+- 增加com.github.joekerouac.common.tools.codec.xml.Dom4JXmlCodec.toXmlElement方法;
+- Dom4JXmlCodec支持namespace写出；
+

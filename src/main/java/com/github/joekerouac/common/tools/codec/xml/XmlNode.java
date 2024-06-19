@@ -57,6 +57,20 @@ public @interface XmlNode {
     String attributeName() default "";
 
     /**
+     * 该节点是否是xml的namespace
+     *
+     * @return true表示该字段是xml的namespace
+     */
+    boolean isNamespace() default false;
+
+    /**
+     * {@link #isNamespace()}为true时消费，表示namespace的前缀
+     *
+     * @return namespace的前缀
+     */
+    String nsPrefix() default "";
+
+    /**
      * 忽略该字段
      *
      * @return 如果为true则为忽略
