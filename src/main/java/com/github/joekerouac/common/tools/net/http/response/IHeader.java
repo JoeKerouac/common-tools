@@ -23,7 +23,7 @@ import org.apache.hc.core5.http.Header;
  */
 public class IHeader {
 
-    private Header header;
+    private final Header header;
 
     IHeader(Header header) {
         this.header = header;
@@ -35,5 +35,10 @@ public class IHeader {
 
     public String getValue() {
         return header.getValue();
+    }
+
+    @Override
+    public String toString() {
+        return header.toString();
     }
 }
