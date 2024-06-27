@@ -34,7 +34,8 @@
 - 升级apache httpclient; `5.0.3` -> `5.2.1`
 - httpclient支持自定义DNS
 
-## v2.4.5
+## v2.1.5
 - 增加com.github.joekerouac.common.tools.codec.xml.Dom4JXmlCodec.toXmlElement方法;
 - Dom4JXmlCodec支持namespace写出；
-
+- IHttpResponse支持获取所有header；
+- 解决服务端响应非2xx并且响应体为空时IHttpResponse中NPE的问题；

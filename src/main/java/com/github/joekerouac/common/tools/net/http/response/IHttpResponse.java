@@ -93,15 +93,16 @@ public class IHttpResponse {
         this.status = httpResponse.getCode();
         this.headers = Arrays.stream(httpResponse.getHeaders()).map(IHeader::new).collect(Collectors.toList());
         InMemoryFile file = message.getBody();
-        this.len = file.getLen();
+        this.len = file == null ? 0 : file.getLen();
         this.body = file;
 
-        this.charset = Optional.ofNullable(file.getCharset()).orElse(Const.DEFAULT_CHARSET).name();
+        this.charset = Optional.ofNullable(file).map(InMemoryFile::getCharset).orElse(Const.DEFAULT_CHARSET).name();
 
         if (status >= ERR400) {
             byte[] data;
             try {
-                data = IOUtils.read(file.getDataAsInputStream(), file.getLen(), true);
+                data = file == null || file.getDataAsInputStream() == null ? new byte[0]
+                    : IOUtils.read(file.getDataAsInputStream(), file.getLen(), true);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -127,6 +128,15 @@ public class IHttpResponse {
         }
 
         return headers.stream().filter(header -> name.equals(header.getName())).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取所有响应头
+     *
+     * @return 响应头
+     */
+    public List<IHeader> getAllHeaders() {
+        return headers;
     }
 
     /**
