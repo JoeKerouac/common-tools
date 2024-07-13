@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -65,14 +66,21 @@ public abstract class AbstractTimeDeserializer<T extends Temporal> extends JsonD
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
         BeanProperty beanProperty) throws JsonMappingException {
-        DateTimeFormat annotation =
+        DateTimeFormat dateTimeFormat =
             Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
-        if (annotation == null) {
-            return this;
+
+        if (dateTimeFormat != null) {
+            return createInstance(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
+                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
         }
 
-        return createInstance(
-            StringUtils.getOrDefault(annotation.deserializer(), StringUtils.getOrDefault(annotation.value(), format)));
+        JsonFormat jsonFormat =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
+        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
+            return createInstance(jsonFormat.pattern());
+        }
+
+        return this;
     }
 
 }

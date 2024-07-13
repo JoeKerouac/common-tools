@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -59,13 +60,20 @@ public class DateDeserializer extends JsonDeserializer<Date> implements Serializ
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
         BeanProperty beanProperty) throws JsonMappingException {
-        DateTimeFormat annotation =
+        DateTimeFormat dateTimeFormat =
             Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
-        if (annotation == null) {
-            return this;
+
+        if (dateTimeFormat != null) {
+            return new DateDeserializer(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
+                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
         }
 
-        return new DateDeserializer(
-            StringUtils.getOrDefault(annotation.deserializer(), StringUtils.getOrDefault(annotation.value(), format)));
+        JsonFormat jsonFormat =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
+        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
+            return new DateDeserializer(jsonFormat.pattern());
+        }
+
+        return this;
     }
 }

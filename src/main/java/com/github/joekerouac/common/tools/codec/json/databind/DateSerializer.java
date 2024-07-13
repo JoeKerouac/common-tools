@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -54,13 +55,20 @@ public class DateSerializer extends JsonSerializer<Date> implements SerializeReg
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
         throws JsonMappingException {
-        DateTimeFormat annotation =
+        DateTimeFormat dateTimeFormat =
             Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
-        if (annotation == null) {
-            return this;
+
+        if (dateTimeFormat != null) {
+            return new DateSerializer(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
+                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
         }
 
-        return new DateSerializer(
-            StringUtils.getOrDefault(annotation.serializer(), StringUtils.getOrDefault(annotation.value(), format)));
+        JsonFormat jsonFormat =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
+        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
+            return new DateSerializer(jsonFormat.pattern());
+        }
+
+        return this;
     }
 }
