@@ -39,3 +39,5 @@
 - Dom4JXmlCodec支持namespace写出；
 - IHttpResponse支持获取所有header；
 - 解决服务端响应非2xx并且响应体为空时IHttpResponse中NPE的问题；
+- 请求头中的content-type不添加字符集；
+- json序列化工具修改；

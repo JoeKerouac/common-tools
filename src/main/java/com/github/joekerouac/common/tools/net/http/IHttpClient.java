@@ -281,8 +281,7 @@ public final class IHttpClient implements AutoCloseable {
         IHttpConfig config = request.getHttpConfig() == null ? this.config.getHttpConfig() : request.getHttpConfig();
         httpRequest.setConfig(buildRequestConfig(config));
         request.getHeaders().forEach(httpRequest::addHeader);
-        httpRequest.addHeader("Content-Type",
-            ContentType.create(request.getContentType(), request.getCharset()).toString());
+        httpRequest.addHeader("Content-Type", request.getContentType());
 
         List<UploadFile> files = null;
         String body = null;

@@ -12,31 +12,34 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.github.joekerouac.common.tools.date.DateUtil;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAccessor;
 
 /**
- * 用于处理LocalDateTime
- * 
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
- * @since 1.0.0
+ * @date 2024-07-13 11:17:28
+ * @since 2.1.5
  */
-public class LocalDateTimeSerializer extends AbstractTimeSerializer<LocalDateTime> {
+public class LocalDateDeserializer extends AbstractTimeDeserializer<LocalDate> {
 
-    public LocalDateTimeSerializer() {
-        super(DateUtil.BASE);
+    public LocalDateDeserializer() {
+        this("yyyy-MM-dd");
     }
 
-    public LocalDateTimeSerializer(String format) {
+    public LocalDateDeserializer(String format) {
         super(format);
     }
 
     @Override
-    protected JsonSerializer<?> createInstance(String format) {
-        return new LocalDateTimeSerializer(format);
+    protected LocalDate from(TemporalAccessor temporal) {
+        return LocalDate.from(temporal);
+    }
+
+    @Override
+    protected JsonDeserializer<?> createInstance(String format) {
+        return new LocalDateDeserializer(format);
     }
 
 }

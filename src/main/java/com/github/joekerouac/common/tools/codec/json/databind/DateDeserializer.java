@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StringDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
@@ -55,11 +54,6 @@ public class DateDeserializer extends JsonDeserializer<Date> implements Serializ
         }
 
         return DateUtil.parse(datetime, format);
-    }
-
-    @Override
-    public void register(SimpleModule module) {
-        module.addDeserializer(Date.class, this);
     }
 
     @Override

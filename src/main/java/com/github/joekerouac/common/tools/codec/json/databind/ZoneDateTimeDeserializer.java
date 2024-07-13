@@ -12,31 +12,35 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.github.joekerouac.common.tools.date.DateUtil;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAccessor;
 
 /**
- * 用于处理LocalDateTime
- * 
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
- * @since 1.0.0
+ * @date 2024-07-13 11:17:28
+ * @since 2.1.5
  */
-public class LocalDateTimeSerializer extends AbstractTimeSerializer<LocalDateTime> {
+public class ZoneDateTimeDeserializer extends AbstractTimeDeserializer<ZonedDateTime> {
 
-    public LocalDateTimeSerializer() {
-        super(DateUtil.BASE);
+    public ZoneDateTimeDeserializer() {
+        // ISO-8601格式，T是 ISO-8601 标准中用于分隔日期部分和时间部分的符号，X是时区
+        this("yyyy-MM-dd'T'HH:mm:ss.SSSX");
     }
 
-    public LocalDateTimeSerializer(String format) {
+    public ZoneDateTimeDeserializer(String format) {
         super(format);
     }
 
     @Override
-    protected JsonSerializer<?> createInstance(String format) {
-        return new LocalDateTimeSerializer(format);
+    protected JsonDeserializer<?> createInstance(String format) {
+        return new ZoneDateTimeDeserializer(format);
+    }
+
+    @Override
+    protected ZonedDateTime from(TemporalAccessor temporal) {
+        return ZonedDateTime.from(temporal);
     }
 
 }

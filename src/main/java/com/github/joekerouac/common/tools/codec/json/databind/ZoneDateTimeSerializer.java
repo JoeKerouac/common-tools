@@ -12,35 +12,28 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.github.joekerouac.common.tools.resource.Resource;
-import com.github.joekerouac.common.tools.resource.ResourceBuilder;
 
-import java.io.IOException;
-import java.util.Map;
+import java.time.LocalDate;
 
 /**
- * 序列化URLResource使用
- *
- * @since 1.0.0
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
+ * @date 2024-07-13 11:17:28
+ * @since 2.1.5
  */
-public class ResourceSerializer extends JsonSerializer<Resource> implements SerializeRegister {
+public class ZoneDateTimeSerializer extends AbstractTimeSerializer<LocalDate> {
+
+    public ZoneDateTimeSerializer() {
+        super("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+    }
+
+    public ZoneDateTimeSerializer(String format) {
+        super(format);
+    }
 
     @Override
-    public void serialize(Resource resource, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
-        throws IOException {
-        jsonGenerator.writeStartObject();
-
-        Map<String, String> map = ResourceBuilder.resourceToMap(resource);
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            jsonGenerator.writeStringField(entry.getKey(), entry.getValue());
-        }
-        jsonGenerator.writeEndObject();
+    protected JsonSerializer<?> createInstance(String format) {
+        return new ZoneDateTimeSerializer(format);
     }
 
 }

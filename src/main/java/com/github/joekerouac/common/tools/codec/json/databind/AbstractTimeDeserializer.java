@@ -19,55 +19,60 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.InMemoryFileSize;
-import com.github.joekerouac.common.tools.io.InMemoryFile;
-import com.github.joekerouac.common.tools.io.InMemoryFileOutputStream;
+import com.fasterxml.jackson.databind.deser.std.StringDeserializer;
+import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
+import com.github.joekerouac.common.tools.string.StringUtils;
 
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
 import java.util.Optional;
 
 /**
  * @author JoeKerouac
- * @date 2023-07-18 16:44
- * @since 2.0.3
+ * @date 2024-07-13 11:27:36
+ * @since 2.1.5
  */
-public class InMemoryFileDeserializer extends JsonDeserializer<InMemoryFile>
+public abstract class AbstractTimeDeserializer<T extends Temporal> extends JsonDeserializer<T>
     implements SerializeRegister, ContextualDeserializer {
 
-    private final int initMemoryBufferSize;
+    protected final DateTimeFormatter formatter;
 
-    private final int memoryBufferSize;
+    protected final String format;
 
-    public InMemoryFileDeserializer() {
-        this(InMemoryFileSize.initMemoryBufferSize, InMemoryFileSize.memoryBufferSize);
+    public AbstractTimeDeserializer(String format) {
+        this.format = format;
+        this.formatter = DateTimeFormatter.ofPattern(format);
     }
 
-    public InMemoryFileDeserializer(int initMemoryBufferSize, int memoryBufferSize) {
-        this.initMemoryBufferSize =
-            initMemoryBufferSize <= 0 ? InMemoryFileSize.initMemoryBufferSize : initMemoryBufferSize;
-        this.memoryBufferSize = memoryBufferSize <= 0 ? InMemoryFileSize.memoryBufferSize : memoryBufferSize;
-    }
+    protected abstract JsonDeserializer<?> createInstance(String format);
+
+    protected abstract T from(TemporalAccessor temporal);
 
     @Override
-    public InMemoryFile deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+    public T deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException, JsonProcessingException {
-        InMemoryFile memoryFile = new InMemoryFile(initMemoryBufferSize, memoryBufferSize);
-        jsonParser.readBinaryValue(new InMemoryFileOutputStream(memoryFile));
+        String datetime = StringDeserializer.instance.deserialize(jsonParser, deserializationContext);
+        if (StringUtils.isBlank(datetime)) {
+            return null;
+        }
 
-        memoryFile.writeFinish();
-        return memoryFile;
+        TemporalAccessor temporal = formatter.parse(datetime);
+        return from(temporal);
     }
 
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
         BeanProperty beanProperty) throws JsonMappingException {
-        InMemoryFileSize annotation =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(InMemoryFileSize.class)).orElse(null);
+        DateTimeFormat annotation =
+            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
         if (annotation == null) {
             return this;
         }
 
-        return new InMemoryFileDeserializer(annotation.initMemoryBufferSize(), annotation.memoryBufferSize());
+        return createInstance(
+            StringUtils.getOrDefault(annotation.deserializer(), StringUtils.getOrDefault(annotation.value(), format)));
     }
 
 }

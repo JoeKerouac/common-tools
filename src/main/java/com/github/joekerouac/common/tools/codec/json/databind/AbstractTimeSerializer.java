@@ -19,36 +19,36 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
-import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 import java.io.IOException;
-import java.util.Date;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
 import java.util.Optional;
 
 /**
- * 用于处理LocalDateTime
- * 
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
- * @since 1.0.0
+ * @date 2024-07-13 11:17:28
+ * @since 2.1.5
  */
-public class DateSerializer extends JsonSerializer<Date> implements SerializeRegister, ContextualSerializer {
+public abstract class AbstractTimeSerializer<T extends Temporal> extends JsonSerializer<T>
+    implements SerializeRegister, ContextualSerializer {
 
-    private final String format;
+    protected final DateTimeFormatter formatter;
 
-    public DateSerializer() {
-        this(DateUtil.BASE);
-    }
+    protected final String format;
 
-    public DateSerializer(String format) {
+    public AbstractTimeSerializer(String format) {
         this.format = format;
+        this.formatter = DateTimeFormatter.ofPattern(format);
     }
+
+    protected abstract JsonSerializer<?> createInstance(String format);
 
     @Override
-    public void serialize(final Date value, final JsonGenerator gen, final SerializerProvider serializers)
+    public void serialize(final T value, final JsonGenerator gen, final SerializerProvider serializers)
         throws IOException {
-        gen.writeString(DateUtil.getFormatDate(value, format));
+        gen.writeString(formatter.format(value));
     }
 
     @Override
@@ -60,7 +60,8 @@ public class DateSerializer extends JsonSerializer<Date> implements SerializeReg
             return this;
         }
 
-        return new DateSerializer(
+        return createInstance(
             StringUtils.getOrDefault(annotation.serializer(), StringUtils.getOrDefault(annotation.value(), format)));
     }
+
 }

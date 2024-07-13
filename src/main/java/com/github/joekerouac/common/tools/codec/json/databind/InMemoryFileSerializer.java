@@ -12,13 +12,12 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
+
+import java.io.IOException;
 
 /**
  * 用于处理LocalDateTime
@@ -35,11 +34,6 @@ public class InMemoryFileSerializer extends JsonSerializer<InMemoryFile> impleme
     public void serialize(final InMemoryFile value, final JsonGenerator gen, final SerializerProvider serializers)
         throws IOException {
         gen.writeBinary(value.getDataAsInputStream(), value.getLen());
-    }
-
-    @Override
-    public void register(final SimpleModule module) {
-        module.addSerializer(InMemoryFile.class, this);
     }
 
 }
