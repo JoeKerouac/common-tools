@@ -12,31 +12,6 @@
  */
 package com.github.joekerouac.common.tools.codec.xml;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
-import org.dom4j.Element;
-import org.dom4j.io.OutputFormat;
-import org.dom4j.io.SAXReader;
-import org.dom4j.io.XMLWriter;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-
 import com.github.joekerouac.common.tools.codec.Codec;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
 import com.github.joekerouac.common.tools.codec.xml.deserializer.BeanDeserializer;
@@ -53,10 +28,35 @@ import com.github.joekerouac.common.tools.reflect.type.JavaType;
 import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
-
 import lombok.AllArgsConstructor;
 import lombok.CustomLog;
 import lombok.Data;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
+import org.dom4j.Namespace;
+import org.dom4j.QName;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.SAXReader;
+import org.dom4j.io.XMLWriter;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * dom4j实现的xml解析器，目前支持类的泛型解析，但是不支持Map、List的泛型解析；
@@ -437,19 +437,26 @@ public class Dom4JXmlCodec implements Codec {
             return null;
         }
 
-        String rootName = defaultRootName;
-
-        if (rootName == null) {
-            XmlNode xmlNode = getXmlNodeFromClass(source.getClass());
-            rootName = xmlNode == null ? null : xmlNode.name();
+        XmlNode xmlNode = getXmlNodeFromClass(source.getClass());
+        String rootNameStr = defaultRootName;
+        if (StringUtils.isBlank(rootNameStr) && xmlNode != null) {
+            rootNameStr = xmlNode.name();
+        }
+        if (StringUtils.isBlank(rootNameStr)) {
+            rootNameStr = DEFAULT_ROOT;
         }
 
-        if (rootName == null) {
-            rootName = DEFAULT_ROOT;
+        QName rootName;
+        if (xmlNode != null && StringUtils.isNotBlank(xmlNode.namespace())) {
+            rootName = DocumentHelper.createQName(rootNameStr,
+                DocumentHelper.createNamespace(xmlNode.nsPrefix(), xmlNode.namespace()));
+        } else {
+            rootName = DocumentHelper.createQName(rootNameStr);
         }
 
         Long start = System.currentTimeMillis();
         Element root = DocumentHelper.createElement(rootName);
+
         buildDocument(root, source, source.getClass(), !hasNull);
         Long end = System.currentTimeMillis();
         LOGGER.debug("解析xml用时" + (end - start) + "ms");
@@ -538,12 +545,25 @@ public class Dom4JXmlCodec implements Codec {
             Element node = parent.element(k);
             if (node == null) {
                 // 搜索不到，创建一个（在属性是父节点属性的情况和节点是list的情况需要将该节点删除）
-                node = DocumentHelper.createElement(k);
+                Namespace namespace = parent.getNamespace();
+                QName name;
+
+                if (xmlNode != null && StringUtils.isNotBlank(xmlNode.namespace())) {
+                    namespace = DocumentHelper.createNamespace(xmlNode.nsPrefix(), xmlNode.namespace());
+                }
+
+                if (namespace == null) {
+                    name = DocumentHelper.createQName(k);
+                } else {
+                    name = DocumentHelper.createQName(k, namespace);
+                }
+
+                node = DocumentHelper.createElement(name);
                 parent.add(node);
             }
 
             // 判断字段对应的是否是属性
-            if (xmlNode != null && (xmlNode.isAttribute() || xmlNode.isNamespace())) {
+            if (xmlNode != null && (xmlNode.isAttribute())) {
                 // 判断是否是父节点的属性
                 if (StringUtils.isBlank(xmlNode.name())) {
                     // 如果是父节点那么删除之前添加的
@@ -556,24 +576,13 @@ public class Dom4JXmlCodec implements Codec {
                     // 这里要判断valueObj是否等于null，因为如果不忽略null的话这里是有可能传过来一个null值的
                     if (valueObj != null) {
                         Map<String, String> attrs = (Map<String, String>)valueObj;
-                        attrs.forEach((key, value) -> {
-                            if (xmlNode.isNamespace()) {
-                                finalNode.addNamespace(key, value);
-                            } else {
-                                finalNode.addAttribute(key, value);
-                            }
-                        });
+                        attrs.forEach(finalNode::addAttribute);
                     }
                 } else {
                     // 属性值，属性值只能是简单值
                     String attrValue = valueObj == null ? "" : String.valueOf(valueObj);
 
-                    // 为属性对应的节点添加属性
-                    if (xmlNode.isNamespace()) {
-                        finalNode.addNamespace(xmlNode.nsPrefix(), attrValue);
-                    } else {
-                        finalNode.addAttribute(attrName, attrValue);
-                    }
+                    finalNode.addAttribute(attrName, attrValue);
                 }
             } else if (type == null) {
                 LOGGER.debug("当前不知道节点[{}]的类型，忽略该节点", k);
