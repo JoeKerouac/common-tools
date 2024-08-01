@@ -53,6 +53,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -478,7 +479,7 @@ public class Dom4JXmlCodec implements Codec {
     @SuppressWarnings("unchecked")
     private void buildDocument(Element parent, Object pojo, Class<?> clazz, boolean ignoreNull) {
         // 字段描述，key是节点名，value是XmlData
-        Map<String, XmlData> map = new HashMap<>();
+        Map<String, XmlData> map = new LinkedHashMap<>();
         // 构建字段描述
         if (pojo instanceof Map) {
             Map<?, ?> pojoMap = (Map<?, ?>)pojo;
