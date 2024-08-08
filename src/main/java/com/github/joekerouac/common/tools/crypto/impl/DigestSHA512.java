@@ -23,7 +23,7 @@ import com.github.joekerouac.common.tools.crypto.constant.DigestDesc;
 public class DigestSHA512 extends AbstractDigest {
 
     public DigestSHA512() {
-        super(DigestDesc.SHA384.getAlgorithm());
+        super(DigestDesc.SHA512.getAlgorithm());
     }
 
     @Override
