@@ -15,13 +15,14 @@ package com.github.joekerouac.common.tools.codec.json.databind;
 import com.fasterxml.jackson.databind.JsonSerializer;
 
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 
 /**
  * @author JoeKerouac
  * @date 2024-07-13 11:17:28
  * @since 2.1.5
  */
-public class ZoneDateTimeSerializer extends AbstractTimeSerializer<LocalDate> {
+public class ZoneDateTimeSerializer extends AbstractTimeSerializer<ZonedDateTime> {
 
     public ZoneDateTimeSerializer() {
         super("yyyy-MM-dd'T'HH:mm:ss.SSSX");
