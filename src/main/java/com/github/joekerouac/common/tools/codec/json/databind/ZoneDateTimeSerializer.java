@@ -14,7 +14,6 @@ package com.github.joekerouac.common.tools.codec.json.databind;
 
 import com.fasterxml.jackson.databind.JsonSerializer;
 
-import java.time.LocalDate;
 import java.time.ZonedDateTime;
 
 /**
