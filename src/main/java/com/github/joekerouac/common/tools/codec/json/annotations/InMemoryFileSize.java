@@ -12,11 +12,20 @@
  */
 package com.github.joekerouac.common.tools.codec.json.annotations;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * @author JoeKerouac
  * @date 2023-07-18 16:44
  * @since 2.0.3
  */
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
 public @interface InMemoryFileSize {
 
     int initMemoryBufferSize = 256;

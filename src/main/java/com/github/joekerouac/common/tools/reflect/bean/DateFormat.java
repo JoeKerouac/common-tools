@@ -14,11 +14,20 @@ package com.github.joekerouac.common.tools.reflect.bean;
 
 import com.github.joekerouac.common.tools.date.DateUtil;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * @author JoeKerouac
  * @date 2022-10-14 14:37:00
  * @since 1.0.0
  */
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
 public @interface DateFormat {
 
     /**
