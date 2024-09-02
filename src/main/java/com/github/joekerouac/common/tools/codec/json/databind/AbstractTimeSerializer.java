@@ -12,20 +12,17 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
-import java.util.Optional;
 
 /**
  * @author JoeKerouac
@@ -35,16 +32,23 @@ import java.util.Optional;
 public abstract class AbstractTimeSerializer<T extends Temporal> extends JsonSerializer<T>
     implements SerializeRegister, ContextualSerializer {
 
+    protected final DateTimeFormatSupplier formatSupplier;
+
     protected final DateTimeFormatter formatter;
 
     protected final String format;
 
     public AbstractTimeSerializer(String format) {
+        this(format, DateTimeFormatSupplier.DEFAULT);
+    }
+
+    public AbstractTimeSerializer(String format, DateTimeFormatSupplier formatSupplier) {
+        this.formatSupplier = formatSupplier;
         this.format = format;
         this.formatter = DateTimeFormatter.ofPattern(format);
     }
 
-    protected abstract JsonSerializer<?> createInstance(String format);
+    protected abstract JsonSerializer<?> createInstance(String format, DateTimeFormatSupplier formatSupplier);
 
     @Override
     public void serialize(final T value, final JsonGenerator gen, final SerializerProvider serializers)
@@ -55,21 +59,13 @@ public abstract class AbstractTimeSerializer<T extends Temporal> extends JsonSer
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
         throws JsonMappingException {
-        DateTimeFormat dateTimeFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
-
-        if (dateTimeFormat != null) {
-            return createInstance(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
-                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
+        DateTimeFormatSupplier.Format format = formatSupplier.getFormat(beanProperty);
+        if (format == null) {
+            return this;
         }
 
-        JsonFormat jsonFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
-        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
-            return createInstance(jsonFormat.pattern());
-        }
-
-        return this;
+        return createInstance(StringUtils.getOrDefault(format.getDeserializer(),
+            StringUtils.getOrDefault(format.getValue(), this.format)), formatSupplier);
     }
 
 }

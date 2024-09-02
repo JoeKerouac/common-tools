@@ -31,9 +31,13 @@ public class LocalDateSerializer extends AbstractTimeSerializer<LocalDate> {
         super(format);
     }
 
+    public LocalDateSerializer(String format, DateTimeFormatSupplier formatSupplier) {
+        super(format, formatSupplier);
+    }
+
     @Override
-    protected JsonSerializer<?> createInstance(String format) {
-        return new LocalDateSerializer(format);
+    protected JsonSerializer<?> createInstance(String format, DateTimeFormatSupplier formatSupplier) {
+        return new LocalDateSerializer(format, formatSupplier);
     }
 
 }

@@ -12,11 +12,6 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import java.io.IOException;
-import java.util.Date;
-import java.util.Optional;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -25,9 +20,11 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StringDeserializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
+
+import java.io.IOException;
+import java.util.Date;
 
 /**
  * @author JoeKerouac
@@ -36,6 +33,8 @@ import com.github.joekerouac.common.tools.string.StringUtils;
  */
 public class DateDeserializer extends JsonDeserializer<Date> implements SerializeRegister, ContextualDeserializer {
 
+    private final DateTimeFormatSupplier formatSupplier;
+
     private final String format;
 
     public DateDeserializer() {
@@ -43,6 +42,11 @@ public class DateDeserializer extends JsonDeserializer<Date> implements Serializ
     }
 
     public DateDeserializer(String format) {
+        this(format, DateTimeFormatSupplier.DEFAULT);
+    }
+
+    public DateDeserializer(String format, DateTimeFormatSupplier formatSupplier) {
+        this.formatSupplier = formatSupplier;
         this.format = format;
     }
 
@@ -60,20 +64,13 @@ public class DateDeserializer extends JsonDeserializer<Date> implements Serializ
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext,
         BeanProperty beanProperty) throws JsonMappingException {
-        DateTimeFormat dateTimeFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
+        DateTimeFormatSupplier.Format format = formatSupplier.getFormat(beanProperty);
 
-        if (dateTimeFormat != null) {
-            return new DateDeserializer(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
-                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
+        if (format == null) {
+            return this;
         }
 
-        JsonFormat jsonFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
-        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
-            return new DateDeserializer(jsonFormat.pattern());
-        }
-
-        return this;
+        return new DateDeserializer(StringUtils.getOrDefault(format.getDeserializer(),
+            StringUtils.getOrDefault(format.getValue(), this.format)), formatSupplier);
     }
 }

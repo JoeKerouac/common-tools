@@ -31,9 +31,13 @@ public class ZoneDateTimeSerializer extends AbstractTimeSerializer<ZonedDateTime
         super(format);
     }
 
+    public ZoneDateTimeSerializer(String format, DateTimeFormatSupplier formatSupplier) {
+        super(format, formatSupplier);
+    }
+
     @Override
-    protected JsonSerializer<?> createInstance(String format) {
-        return new ZoneDateTimeSerializer(format);
+    protected JsonSerializer<?> createInstance(String format, DateTimeFormatSupplier formatSupplier) {
+        return new ZoneDateTimeSerializer(format, formatSupplier);
     }
 
 }

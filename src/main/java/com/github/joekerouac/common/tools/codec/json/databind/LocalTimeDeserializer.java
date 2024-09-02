@@ -32,14 +32,18 @@ public class LocalTimeDeserializer extends AbstractTimeDeserializer<LocalTime> {
         super(format);
     }
 
+    public LocalTimeDeserializer(String format, DateTimeFormatSupplier formatSupplier) {
+        super(format, formatSupplier);
+    }
+
     @Override
     protected LocalTime from(TemporalAccessor temporal) {
         return LocalTime.from(temporal);
     }
 
     @Override
-    protected JsonDeserializer<?> createInstance(String format) {
-        return new LocalTimeDeserializer(format);
+    protected JsonDeserializer<?> createInstance(String format, DateTimeFormatSupplier formatSupplier) {
+        return new LocalTimeDeserializer(format, formatSupplier);
     }
 
 }

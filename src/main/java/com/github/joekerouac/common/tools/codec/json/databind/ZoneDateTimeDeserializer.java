@@ -33,8 +33,12 @@ public class ZoneDateTimeDeserializer extends AbstractTimeDeserializer<ZonedDate
         super(format);
     }
 
+    public ZoneDateTimeDeserializer(String format, DateTimeFormatSupplier formatSupplier) {
+        super(format, formatSupplier);
+    }
+
     @Override
-    protected JsonDeserializer<?> createInstance(String format) {
+    protected JsonDeserializer<?> createInstance(String format, DateTimeFormatSupplier formatSupplier) {
         return new ZoneDateTimeDeserializer(format);
     }
 

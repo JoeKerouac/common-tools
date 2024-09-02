@@ -12,20 +12,17 @@
  */
 package com.github.joekerouac.common.tools.codec.json.databind;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-import com.github.joekerouac.common.tools.codec.json.annotations.DateTimeFormat;
 import com.github.joekerouac.common.tools.date.DateUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Optional;
 
 /**
  * 用于处理LocalDateTime
@@ -36,6 +33,8 @@ import java.util.Optional;
  */
 public class DateSerializer extends JsonSerializer<Date> implements SerializeRegister, ContextualSerializer {
 
+    private final DateTimeFormatSupplier formatSupplier;
+
     private final String format;
 
     public DateSerializer() {
@@ -43,6 +42,11 @@ public class DateSerializer extends JsonSerializer<Date> implements SerializeReg
     }
 
     public DateSerializer(String format) {
+        this(format, DateTimeFormatSupplier.DEFAULT);
+    }
+
+    public DateSerializer(String format, DateTimeFormatSupplier formatSupplier) {
+        this.formatSupplier = formatSupplier;
         this.format = format;
     }
 
@@ -55,20 +59,13 @@ public class DateSerializer extends JsonSerializer<Date> implements SerializeReg
     @Override
     public JsonSerializer<?> createContextual(SerializerProvider serializerProvider, BeanProperty beanProperty)
         throws JsonMappingException {
-        DateTimeFormat dateTimeFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
+        DateTimeFormatSupplier.Format format = formatSupplier.getFormat(beanProperty);
 
-        if (dateTimeFormat != null) {
-            return new DateSerializer(StringUtils.getOrDefault(dateTimeFormat.deserializer(),
-                StringUtils.getOrDefault(dateTimeFormat.value(), format)));
+        if (format == null) {
+            return this;
         }
 
-        JsonFormat jsonFormat =
-            Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(JsonFormat.class)).orElse(null);
-        if (jsonFormat != null && StringUtils.isNotBlank(jsonFormat.pattern())) {
-            return new DateSerializer(jsonFormat.pattern());
-        }
-
-        return this;
+        return new DateSerializer(StringUtils.getOrDefault(format.getDeserializer(),
+            StringUtils.getOrDefault(format.getValue(), this.format)), formatSupplier);
     }
 }
