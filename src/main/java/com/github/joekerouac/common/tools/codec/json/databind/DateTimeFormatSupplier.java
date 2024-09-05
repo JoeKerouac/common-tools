@@ -33,7 +33,7 @@ public interface DateTimeFormatSupplier {
             Optional.ofNullable(beanProperty).map(p -> p.getAnnotation(DateTimeFormat.class)).orElse(null);
 
         if (dateTimeFormat != null) {
-            return new Format(dateTimeFormat.deserializer(), dateTimeFormat.serializer(),
+            return new Format(dateTimeFormat.value(), dateTimeFormat.serializer(),
                 dateTimeFormat.deserializer());
         }
 
