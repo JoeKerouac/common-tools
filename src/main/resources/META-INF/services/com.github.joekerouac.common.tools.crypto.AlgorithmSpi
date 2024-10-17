@@ -8,6 +8,7 @@ com.github.joekerouac.common.tools.crypto.impl.HmacMD5
 com.github.joekerouac.common.tools.crypto.impl.HmacSHA1
 com.github.joekerouac.common.tools.crypto.impl.HmacSHA256
 com.github.joekerouac.common.tools.crypto.impl.HmacSHA384
+com.github.joekerouac.common.tools.crypto.impl.HmacSHA512
 
 com.github.joekerouac.common.tools.crypto.impl.PhashSHA1
 com.github.joekerouac.common.tools.crypto.impl.PhashSHA256
