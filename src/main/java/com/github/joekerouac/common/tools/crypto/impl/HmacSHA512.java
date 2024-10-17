@@ -10,34 +10,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.github.joekerouac.common.tools.crypto.constant;
-
-import lombok.Getter;
+package com.github.joekerouac.common.tools.crypto.impl;
 
 /**
- * @since 1.0.0
+ * @since 2.1.5
  * @author JoeKerouac
- * @date 2022-10-14 14:37:00
  */
-public enum HmacDesc {
+public class HmacSHA512 extends AbstractHmac {
 
-    MD5("MD5"),
+    public HmacSHA512() {
+        super(new DigestSHA512(), 64, 128);
+    }
 
-    SHA1("SHA1"),
-
-    SHA256("SHA256"),
-
-    SHA384("SHA384"),
-
-    SHA512("SHA512"),
-
-    ;
-
-    @Getter
-    private final String algorithm;
-
-    HmacDesc(String algorithm) {
-        this.algorithm = algorithm;
+    @Override
+    public String[] alias() {
+        return new String[] {"alias.hmac.sha512", "alias.hmac.sha-512", "alias.hmac.SHA512", "alias.hmac.SHA-512",
+            "alias.hmac.hmacSHA512", "alias.hmac.HmacSHA512", "alias.hmac.hmac-sha512", "alias.hmac.Hmac-SHA512"};
     }
 
 }
