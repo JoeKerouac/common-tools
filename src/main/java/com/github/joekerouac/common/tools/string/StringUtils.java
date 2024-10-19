@@ -15,6 +15,7 @@ package com.github.joekerouac.common.tools.string;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 import javax.validation.constraints.NotNull;
 
@@ -223,6 +224,50 @@ public class StringUtils {
      */
     public static String trim(String data, char trim) {
         return trim(data, Character.toString(trim));
+    }
+
+    /**
+     * 如果字符串长度小于指定长度，则在左边补上指定字符
+     *
+     * @param str
+     *            字符串
+     * @param len
+     *            目标长度
+     * @param pad
+     *            补上的字符
+     * @return 补齐后的字符串
+     */
+    public static String leftPadding(String str, int len, char pad) {
+        int strLen = str.length();
+        if (strLen >= len) {
+            return str;
+        }
+
+        char[] chars = new char[len - strLen];
+        Arrays.fill(chars, pad);
+        return new String(chars) + str;
+    }
+
+    /**
+     * 如果字符串长度小于指定长度，则在右边补上指定字符
+     *
+     * @param str
+     *            字符串
+     * @param len
+     *            目标长度
+     * @param pad
+     *            补上的字符
+     * @return 补齐后的字符串
+     */
+    public static String rightPadding(String str, int len, char pad) {
+        int strLen = str.length();
+        if (strLen >= len) {
+            return str;
+        }
+
+        char[] chars = new char[len - strLen];
+        Arrays.fill(chars, pad);
+        return str + new String(chars);
     }
 
     /**
