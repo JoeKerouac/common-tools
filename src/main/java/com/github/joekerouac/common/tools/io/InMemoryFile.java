@@ -339,7 +339,7 @@ public class InMemoryFile implements Closeable {
 
     private static final class InMemoryFileInputStream extends InputStream {
 
-        private InputStream inputStream;
+        private final InputStream inputStream;
 
         private volatile InMemoryFile inMemoryFile;
 
