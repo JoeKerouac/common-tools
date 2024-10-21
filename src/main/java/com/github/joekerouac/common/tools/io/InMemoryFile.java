@@ -157,6 +157,10 @@ public class InMemoryFile implements Closeable {
      *             IO异常
      */
     public void writeFinish() throws IOException {
+        if (close) {
+            return;
+        }
+
         ByteBufferRef ref = null;
         if (filter != null) {
             ref = filter.finish();
