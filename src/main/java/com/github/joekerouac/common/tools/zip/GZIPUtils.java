@@ -149,7 +149,7 @@ public class GZIPUtils {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new InMemoryFileOutputStream(inMemoryFile))) {
             ZipEntry zipEntry = new ZipEntry(entryName);
             zipOutputStream.putNextEntry(zipEntry);
-            IOUtils.write(new GZIPOutputStream(new InMemoryFileOutputStream(inMemoryFile)), inputStream, false);
+            IOUtils.write(zipOutputStream, inputStream, false);
         }
 
         inMemoryFile.writeFinish();
