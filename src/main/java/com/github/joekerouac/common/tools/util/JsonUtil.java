@@ -21,6 +21,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultIndenter;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.joekerouac.common.tools.codec.exception.SerializeException;
 import com.github.joekerouac.common.tools.codec.json.JacksonJsonCodec;
@@ -305,7 +307,10 @@ public class JsonUtil {
      */
     public static byte[] writeWithFormat(Object data) {
         try {
-            return mapperAtomicReference.get().writerWithDefaultPrettyPrinter().writeValueAsBytes(data);
+            // 默认换行是取的系统参数line.separator的值，Windows下是\r\n，我们这里写死所有系统都是\n
+            return mapperAtomicReference.get()
+                .writer(new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter("  ", "\n")))
+                .writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
             throw new CommonException(ErrorCodeEnum.UNKNOWN_EXCEPTION, StringUtils.format("数据[{}]json格式化输出异常", data),
                 e);
