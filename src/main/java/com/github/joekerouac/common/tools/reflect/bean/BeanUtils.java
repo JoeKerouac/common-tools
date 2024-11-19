@@ -169,11 +169,16 @@ public class BeanUtils {
                         continue;
                     }
 
+                    Ignore ignore = propertyDescriptor.getAnnotation(Ignore.class);
+                    if (ignore != null) {
+                        continue;
+                    }
+
+                    Alias alias = propertyDescriptor.getAnnotation(Alias.class);
                     String name = null;
                     try {
                         Object value = propertyDescriptor.read(pojo);
 
-                        Alias alias = propertyDescriptor.getAnnotation(Alias.class);
                         name = (alias == null || StringUtils.isBlank(alias.value())) ? propertyDescriptor.name()
                             : alias.value();
                         name = StringUtils.isBlank(prefix) ? name : prefix + StringConst.DOT + name;
@@ -227,6 +232,11 @@ public class BeanUtils {
         }
         for (Field field : fields) {
             LOGGER.debug("获取字段[{}]的值", field);
+            Ignore ignore = field.getAnnotation(Ignore.class);
+            if (ignore != null) {
+                continue;
+            }
+
             Alias alias = field.getDeclaredAnnotation(Alias.class);
 
             String name = (alias == null || StringUtils.isBlank(alias.value())) ? field.getName() : alias.value();
@@ -413,6 +423,11 @@ public class BeanUtils {
         }
 
         for (Field srcField : srcFields) {
+            Ignore ignore = srcField.getAnnotation(Ignore.class);
+            if (ignore != null) {
+                continue;
+            }
+
             String fieldName = srcField.getName();
 
             // 要注入的数据
