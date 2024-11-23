@@ -12,6 +12,8 @@
  */
 package com.github.joekerouac.common.tools.util;
 
+import java.util.Collection;
+
 /**
  * @since 1.0.0
  * @author JoeKerouac
@@ -57,6 +59,78 @@ public class NumberUtil {
         result[1] = (byte)((data >>> 16) & 0XFF);
         result[2] = (byte)((data >>> 8) & 0XFF);
         result[3] = (byte)(data & 0XFF);
+        return result;
+    }
+
+    /**
+     * 求给定数字a和数字b的最大公约数
+     *
+     * @param a
+     *            数字a
+     * @param b
+     *            数字b
+     * @return 数字a和数字b的最大公约数
+     */
+    public static int gcd(int a, int b) {
+        while (b != 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+
+    /**
+     * 求给定一组数字的最大公约数
+     *
+     * @param numbers
+     *            给定数据数组
+     * @return 最大公约数
+     */
+    public static int gcd(int... numbers) {
+        if (numbers == null || numbers.length == 0) {
+            throw new IllegalArgumentException("At least one number is required");
+        }
+
+        int result = numbers[0];
+        for (int i = 1; i < numbers.length; i++) {
+            result = gcd(result, numbers[i]);
+            // 如果当前结果是 1，提前结束
+            if (result == 1) {
+                return 1;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 求给定一组数字的最大公约数
+     *
+     * @param numbers
+     *            给定数据数组
+     * @return 最大公约数
+     */
+    public static int gcd(Collection<Integer> numbers) {
+        if (numbers == null || numbers.isEmpty()) {
+            throw new IllegalArgumentException("At least one number is required");
+        }
+
+        int result = 0;
+        boolean first = true;
+        for (Integer number : numbers) {
+            if (first) {
+                result = number;
+                first = false;
+            } else {
+                result = gcd(result, number);
+                // 如果当前结果是 1，提前结束
+                if (result == 1) {
+                    return 1;
+                }
+            }
+        }
+
         return result;
     }
 
