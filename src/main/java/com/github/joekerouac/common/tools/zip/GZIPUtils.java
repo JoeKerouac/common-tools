@@ -145,15 +145,30 @@ public class GZIPUtils {
      */
     public static InputStream zip(String entryName, InputStream inputStream, int bufferSize) throws IOException {
         InMemoryFile inMemoryFile = new InMemoryFile(bufferSize, bufferSize);
+        zip(entryName, inputStream, new InMemoryFileOutputStream(inMemoryFile));
+        inMemoryFile.writeFinish();
+        return inMemoryFile.getDataAsInputStream();
+    }
 
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(new InMemoryFileOutputStream(inMemoryFile))) {
+    /**
+     * 将普通的输入流转换为zip文件写出到指定输出流
+     *
+     * @param entryName
+     *            输入流写入zip文件的entryName（带目录）
+     * @param inputStream
+     *            输入流
+     * @param outputStream
+     *            输出流
+     * @return zip文件输入流
+     * @throws IOException
+     *             IO异常
+     */
+    public static void zip(String entryName, InputStream inputStream, OutputStream outputStream) throws IOException {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
             ZipEntry zipEntry = new ZipEntry(entryName);
             zipOutputStream.putNextEntry(zipEntry);
             IOUtils.write(zipOutputStream, inputStream, false);
         }
-
-        inMemoryFile.writeFinish();
-        return inMemoryFile.getDataAsInputStream();
     }
 
     /**
