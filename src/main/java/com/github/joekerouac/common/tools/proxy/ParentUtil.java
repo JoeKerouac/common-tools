@@ -13,6 +13,8 @@
 package com.github.joekerouac.common.tools.proxy;
 
 import java.lang.reflect.Modifier;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.collection.Pair;
@@ -41,15 +43,12 @@ public class ParentUtil {
             throw new IllegalArgumentException(StringUtils.format("当前未指定任何父类以及接口"));
         }
 
-        Class<?>[] interfaces = new Class[parentSize];
-        interfaces[0] = ProxyParent.class;
-        int i = 1;
+        Set<Class<?>> interfaces = new HashSet<>();
+        interfaces.add(ProxyParent.class);
         Class<?> superClass = null;
         for (Class<?> clazz : classes) {
             if (clazz.isInterface()) {
-                if (i < interfaces.length) {
-                    interfaces[i++] = clazz;
-                }
+                interfaces.add(clazz);
             } else if (superClass != null) {
                 throw new IllegalArgumentException(StringUtils.format("一个类不能有两个父类，当前父类: [{}:{}]", superClass, clazz));
             } else {
@@ -57,11 +56,7 @@ public class ParentUtil {
             }
         }
 
-        if (superClass == null) {
-            // 没有父类时，应该使用原数组，新的数组中会缺失一个数据
-            interfaces = CollectionUtil.addTo(ProxyParent.class, classes);
-        }
-        return new Pair<>(superClass, interfaces);
+        return new Pair<>(superClass, interfaces.toArray(new Class[0]));
     }
 
 }
