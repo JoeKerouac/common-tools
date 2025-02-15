@@ -197,7 +197,160 @@ public interface ProxyClient {
      *            代理真实类型
      * @return 代理
      */
-    <T> T create(Class<T> parent, T proxy, ClassLoader loader, String name, Interception interception,
+    @SuppressWarnings("unchecked")
+    default <T> T create(Class<T> parent, T proxy, ClassLoader loader, String name, Interception interception,
+        Class<?>[] paramTypes, Object[] params) {
+        return (T)create(new Class[] {parent}, proxy, loader, name, interception, paramTypes, params);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, Interception proxy) {
+        return create(parent, null, DEFAULT_LOADER, null, proxy, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的，支持多重代理
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param interception
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, Object proxy, Interception interception) {
+        return create(parent, proxy, DEFAULT_LOADER, null, interception, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param proxy
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, String name, Interception proxy) {
+        return create(parent, null, DEFAULT_LOADER, name, proxy, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的，支持多重代理
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param interception
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, Object proxy, String name, Interception interception) {
+        return create(parent, proxy, DEFAULT_LOADER, name, interception, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param proxy
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, ClassLoader loader, Interception proxy) {
+        return create(parent, null, loader, null, proxy, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的，支持多重代理
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param interception
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, Object proxy, ClassLoader loader, Interception interception) {
+        return create(parent, proxy, loader, null, interception, null, null);
+    }
+
+    /**
+     * 构建指定接口的代理Class，接口必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param proxy
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, ClassLoader loader, String name, Interception proxy) {
+        return create(parent, null, loader, name, proxy, null, null);
+    }
+
+    /**
+     * 构建指定对象的代理，对象的类必须是公共的，同时代理方法也必须是公共的，支持多重代理
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param interception
+     *            方法代理
+     * @return 代理
+     */
+    default Object create(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception) {
+        return create(parent, proxy, loader, name, interception, null, null);
+    }
+
+    /**
+     * 构建指定对象的代理，对象的类必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param interception
+     *            方法代理
+     * @param paramTypes
+     *            构造器参数类型，如果构造器是无参构造器那么传null
+     * @param params
+     *            构造器参数，如果是无参构造器那么传null
+     * @return 代理
+     */
+    Object create(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception,
         Class<?>[] paramTypes, Object[] params);
 
     /**
@@ -217,8 +370,28 @@ public interface ProxyClient {
      *            代理真实类型
      * @return 代理class
      */
-    <T> Class<? extends T> createClass(Class<T> parent, T proxy, ClassLoader loader, String name,
-        Interception interception);
+    @SuppressWarnings("unchecked")
+    default <T> Class<? extends T> createClass(Class<T> parent, T proxy, ClassLoader loader, String name,
+        Interception interception) {
+        return (Class<? extends T>)create(new Class[] {parent}, proxy, loader, name, interception);
+    }
+
+    /**
+     * 构建指定对象的代理Class，稍后可以通过反射构建该class的实例，对象的类必须是公共的，同时代理方法也必须是公共的
+     *
+     * @param parent
+     *            指定接口
+     * @param proxy
+     *            被代理的对象
+     * @param loader
+     *            加载生成的对象的class的classloader
+     * @param name
+     *            生成的对象的class名字，不一定支持（java代理不支持）
+     * @param interception
+     *            方法代理
+     * @return 代理class
+     */
+    Class<?> createClass(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception);
 
     /**
      * 获取代理客户端的类型

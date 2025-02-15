@@ -62,7 +62,7 @@ public interface Interception {
      * @param superCall
      *            父类调用，可以为null
      * @param proxyClass
-     *            代理的类型，不能为null
+     *            被代理的对象的类型
      * @return 方法执行结果
      * @throws Throwable
      *             Throwable
@@ -87,7 +87,7 @@ public interface Interception {
                     // 1、如果是对指定对象代理，需要先比较代理对象；
                     // 2、比较class是否一致；
                     // 3、比较interception是否一致；
-                    return Objects.equals(target, p.GET_TARGET()) && proxyClass.equals(p.GET_TARGET_CLASS())
+                    return Objects.equals(target, p.GET_TARGET()) && Objects.equals(proxyClass, p.GET_TARGET_CLASS())
                         && interception.equals(p.GET_INTERCEPTION());
                 }
                 return false;

@@ -13,9 +13,11 @@
 package com.github.joekerouac.common.tools.proxy.cglib;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
+import com.github.joekerouac.common.tools.collection.Pair;
 import com.github.joekerouac.common.tools.proxy.Interception;
+import com.github.joekerouac.common.tools.proxy.ParentUtil;
 import com.github.joekerouac.common.tools.proxy.ProxyClient;
-import com.github.joekerouac.common.tools.proxy.ProxyParent;
+import com.github.joekerouac.common.tools.string.StringUtils;
 
 import net.sf.cglib.proxy.Enhancer;
 
@@ -28,26 +30,17 @@ import net.sf.cglib.proxy.Enhancer;
 public class CglibProxyClient implements ProxyClient {
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> T create(Class<T> parent, T proxy, ClassLoader loader, String name, Interception interception,
+    public Object create(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception,
         Class<?>[] paramTypes, Object[] params) {
         if (!CollectionUtil.sizeEquals(params, paramTypes)) {
             throw new IllegalArgumentException("构造器参数列表paramTypes长度和实际参数params长度不一致");
         }
 
-        Enhancer enhancer = new Enhancer();
-        if (parent.isInterface()) {
-            enhancer.setInterfaces(new Class[] {ProxyParent.class, parent});
-        } else {
-            enhancer.setSuperclass(parent);
-            enhancer.setInterfaces(new Class[] {ProxyParent.class});
-        }
-        enhancer.setClassLoader(loader);
-        enhancer.setCallback(new MethodInterceptorAdapter(interception, proxy, parent));
+        Enhancer enhancer = createEnhancer(parent, proxy, loader, name, interception);
         if (CollectionUtil.isEmpty(paramTypes)) {
-            return (T)enhancer.create();
+            return enhancer.create();
         } else {
-            return (T)enhancer.create(paramTypes, params);
+            return enhancer.create(paramTypes, params);
         }
     }
 
@@ -67,24 +60,29 @@ public class CglibProxyClient implements ProxyClient {
      *            生成的对象的class名字，不一定支持（java代理不支持）
      * @param interception
      *            方法代理
-     * @param <T>
-     *            代理真实类型
      * @return 代理class
      */
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> Class<? extends T> createClass(Class<T> parent, T proxy, ClassLoader loader, String name,
+    public Class<?> createClass(Class<?>[] parent, Object proxy, ClassLoader loader, String name,
+        Interception interception) {
+        return createEnhancer(parent, proxy, loader, name, interception).createClass();
+    }
+
+    private Enhancer createEnhancer(Class<?>[] parent, Object proxy, ClassLoader loader, String name,
         Interception interception) {
         Enhancer enhancer = new Enhancer();
-        if (parent.isInterface()) {
-            enhancer.setInterfaces(new Class[] {ProxyParent.class, parent});
-        } else {
-            enhancer.setSuperclass(parent);
-            enhancer.setInterfaces(new Class[] {ProxyParent.class});
-        }
+        Pair<Class<?>, Class<?>[]> pair = ParentUtil.setInterfaces(parent, proxy);
+        Class<?> superClass = pair.getKey();
+        Class<?>[] interfaces = pair.getValue();
+
+        enhancer.setSuperclass(superClass);
+        enhancer.setInterfaces(interfaces);
         enhancer.setClassLoader(loader);
-        enhancer.setCallback(new MethodInterceptorAdapter(interception, proxy, parent));
-        return (Class<? extends T>)enhancer.createClass();
+        enhancer.setCallback(new MethodInterceptorAdapter(interception, proxy, superClass, interfaces));
+        if (StringUtils.isNotBlank(name)) {
+            enhancer.setNamingPolicy((s, s1, o, predicate) -> name);
+        }
+        return enhancer;
     }
 
     @Override

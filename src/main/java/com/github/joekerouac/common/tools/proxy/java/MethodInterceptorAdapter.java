@@ -15,7 +15,6 @@ package com.github.joekerouac.common.tools.proxy.java;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
-import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.proxy.Interception;
 import com.github.joekerouac.common.tools.proxy.ProxyParent;
@@ -39,13 +38,11 @@ public class MethodInterceptorAdapter implements InvocationHandler {
 
     private final ProxyParent proxyParent;
 
-    public MethodInterceptorAdapter(Object target, Class<?> targetClass, Interception interception) {
-        Assert.notNull(targetClass, "targetClass 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
+    public MethodInterceptorAdapter(Object target, Class<?>[] interfaces, Interception interception) {
         Assert.notNull(interception, "interception 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
         this.target = target;
         this.interception = interception;
-        this.proxyParent = new ProxyParent.InternalProxyParent(target, targetClass,
-            CollectionUtil.addTo(ProxyParent.class, targetClass.getInterfaces()), interception);
+        this.proxyParent = new ProxyParent.InternalProxyParent(target, interfaces, interception);
     }
 
     @Override

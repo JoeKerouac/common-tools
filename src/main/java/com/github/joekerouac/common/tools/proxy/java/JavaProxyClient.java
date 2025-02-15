@@ -15,9 +15,11 @@ package com.github.joekerouac.common.tools.proxy.java;
 import java.lang.reflect.Proxy;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
+import com.github.joekerouac.common.tools.collection.Pair;
 import com.github.joekerouac.common.tools.proxy.Interception;
+import com.github.joekerouac.common.tools.proxy.ParentUtil;
 import com.github.joekerouac.common.tools.proxy.ProxyClient;
-import com.github.joekerouac.common.tools.proxy.ProxyParent;
+import com.github.joekerouac.common.tools.string.StringUtils;
 
 /**
  * 需要注意的是java原生代理客户端只支持对接口的代理，不支持对普通类或者抽象类代理，同时不支持设置代理生成的类的名字
@@ -33,20 +35,26 @@ public class JavaProxyClient implements ProxyClient {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> T create(Class<T> parent, T proxy, ClassLoader loader, String name, Interception interception,
+    public Object create(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception,
         Class<?>[] paramTypes, Object[] params) {
         if (!CollectionUtil.sizeEquals(params, paramTypes)) {
             throw new IllegalArgumentException("构造器参数列表paramTypes长度和实际参数params长度不一致");
         }
 
-        return (T)Proxy.newProxyInstance(loader, new Class[] {parent, ProxyParent.class},
-            new MethodInterceptorAdapter(proxy, parent, interception));
+        Pair<Class<?>, Class<?>[]> pair = ParentUtil.setInterfaces(parent, proxy);
+        Class<?> superClass = pair.getKey();
+        Class<?>[] interfaces = pair.getValue();
+
+        if (superClass != null) {
+            throw new IllegalArgumentException(StringUtils.format("Java代理实现不允许指定父类: [{}]", superClass));
+        }
+
+        return Proxy.newProxyInstance(loader, interfaces,
+            new MethodInterceptorAdapter(proxy, interfaces, interception));
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> Class<T> createClass(Class<T> parent, T proxy, ClassLoader loader, String name,
+    public Class<?> createClass(Class<?>[] parent, Object proxy, ClassLoader loader, String name,
         Interception interception) {
         // java代理返回class对象没有必要，而且构造器是一个特殊构造器，详情参照Proxy#newProxyInstance方法实现
         throw new UnsupportedOperationException("java 代理不支持对对象进行代理");

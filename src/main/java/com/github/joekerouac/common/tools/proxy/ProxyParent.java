@@ -131,12 +131,11 @@ public interface ProxyParent {
 
         private final Class<?>[] interfaces;
 
-        private Interception interception;
+        private final Interception interception;
 
-        public InternalProxyParent(Object target, Class<?> targetClass, Class<?>[] interfaces,
-            Interception interception) {
+        public InternalProxyParent(Object target, Class<?>[] interfaces, Interception interception) {
             this.target = target;
-            this.targetClass = targetClass;
+            this.targetClass = target == null ? null : target.getClass();
             this.interfaces = interfaces;
             this.interception = interception;
         }

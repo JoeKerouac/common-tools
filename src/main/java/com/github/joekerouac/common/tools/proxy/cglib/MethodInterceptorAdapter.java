@@ -14,7 +14,6 @@ package com.github.joekerouac.common.tools.proxy.cglib;
 
 import java.lang.reflect.Method;
 
-import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.proxy.Interception;
 import com.github.joekerouac.common.tools.proxy.Invoker;
@@ -42,25 +41,23 @@ public class MethodInterceptorAdapter implements MethodInterceptor {
      */
     private final Object target;
 
-    private final Class<?> parent;
+    private final Class<?> superClass;
 
     private final ProxyParent proxyParent;
 
-    public MethodInterceptorAdapter(Interception proxy, Object target, Class<?> parent) {
+    public MethodInterceptorAdapter(Interception proxy, Object target, Class<?> superClass, Class<?>[] interfaces) {
         Assert.notNull(proxy, "proxy 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
-        Assert.notNull(parent, "parent 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
+        Assert.notNull(interfaces, "parent 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
         this.proxy = proxy;
         this.target = target;
-        this.parent = parent;
-
-        this.proxyParent = new ProxyParent.InternalProxyParent(target, parent,
-            CollectionUtil.addTo(ProxyParent.class, parent.getInterfaces()), proxy);
+        this.superClass = superClass;
+        this.proxyParent = new ProxyParent.InternalProxyParent(target, interfaces, proxy);
     }
 
     @Override
     public Object intercept(Object obj, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
         Invoker supperCall = null;
-        if (!parent.isInterface()) {
+        if (superClass != null) {
             supperCall = () -> methodProxy.invokeSuper(obj, args);
         }
 

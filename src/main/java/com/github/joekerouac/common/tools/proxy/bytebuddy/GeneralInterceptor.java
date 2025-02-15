@@ -15,7 +15,6 @@ package com.github.joekerouac.common.tools.proxy.bytebuddy;
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
 
-import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.proxy.Interception;
 import com.github.joekerouac.common.tools.proxy.ProxyParent;
@@ -44,19 +43,17 @@ public class GeneralInterceptor {
      */
     private final Object target;
 
+    private final Class<?> superClass;
+
     private final ProxyParent proxyParent;
 
-    public GeneralInterceptor(Interception interception, Class<?> parent) {
-        this(interception, parent, null);
-    }
-
-    public GeneralInterceptor(Interception interception, Class<?> parent, Object target) {
+    public GeneralInterceptor(Interception interception, Object target, Class<?> superClass, Class<?>[] interfaces) {
         Assert.notNull(interception, "interception 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
-        Assert.notNull(parent, "parent 不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
+        Assert.notNull(interfaces, "接口不能为 null", ExceptionProviderConst.IllegalArgumentExceptionProvider);
         this.interception = interception;
         this.target = target;
-        this.proxyParent = new ProxyParent.InternalProxyParent(target, parent,
-            CollectionUtil.addTo(ProxyParent.class, parent.getInterfaces()), interception);
+        this.superClass = superClass;
+        this.proxyParent = new ProxyParent.InternalProxyParent(target, interfaces, interception);
     }
 
     /**

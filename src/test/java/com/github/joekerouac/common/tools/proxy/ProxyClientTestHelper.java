@@ -50,8 +50,8 @@ public class ProxyClientTestHelper {
         Assert.assertTrue(say instanceof ProxyParent);
         ProxyParent parent = (ProxyParent)say;
         Assert.assertNull(parent.GET_TARGET());
-        Assert.assertEquals(parent.GET_INTERFACES().length, 1);
-        Assert.assertEquals(parent.GET_TARGET_CLASS(), Say.class);
+        Assert.assertEquals(parent.GET_INTERFACES().length, 2);
+        Assert.assertNull(parent.GET_TARGET_CLASS());
         Assert.assertEquals(parent.GET_INTERCEPTION(), interception);
     }
 

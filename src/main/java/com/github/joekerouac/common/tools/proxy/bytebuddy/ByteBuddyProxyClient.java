@@ -12,11 +12,14 @@
  */
 package com.github.joekerouac.common.tools.proxy.bytebuddy;
 
+import java.util.Arrays;
+
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
+import com.github.joekerouac.common.tools.collection.Pair;
 import com.github.joekerouac.common.tools.proxy.Interception;
+import com.github.joekerouac.common.tools.proxy.ParentUtil;
 import com.github.joekerouac.common.tools.proxy.ProxyClassLoader;
 import com.github.joekerouac.common.tools.proxy.ProxyClient;
-import com.github.joekerouac.common.tools.proxy.ProxyParent;
 import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.string.StringUtils;
 
@@ -38,7 +41,7 @@ public class ByteBuddyProxyClient implements ProxyClient {
     private static final AnyMethodElementMatcher MATCHER = new AnyMethodElementMatcher();
 
     @Override
-    public <T> T create(Class<T> parent, T proxy, ClassLoader loader, String name, Interception interception,
+    public Object create(Class<?>[] parent, Object proxy, ClassLoader loader, String name, Interception interception,
         Class<?>[] paramTypes, Object[] params) {
         if (!CollectionUtil.sizeEquals(params, paramTypes)) {
             throw new IllegalArgumentException("构造器参数列表paramTypes长度和实际参数params长度不一致");
@@ -48,9 +51,22 @@ public class ByteBuddyProxyClient implements ProxyClient {
     }
 
     @Override
-    public <T> Class<? extends T> createClass(Class<T> parent, T proxy, ClassLoader loader, String name,
+    public Class<?> createClass(Class<?>[] parent, Object proxy, ClassLoader loader, String name,
         Interception interception) {
-        DynamicType.Builder<T> builder = new ByteBuddy().subclass(parent).implement(ProxyParent.class);
+        ByteBuddy byteBuddy = new ByteBuddy();
+
+        Pair<Class<?>, Class<?>[]> pair = ParentUtil.setInterfaces(parent, proxy);
+        Class<?> superClass = pair.getKey();
+        Class<?>[] interfaces = pair.getValue();
+
+        DynamicType.Builder<?> builder;
+        if (superClass != null) {
+            builder = byteBuddy.subclass(superClass);
+        } else {
+            builder = byteBuddy.subclass(Object.class);
+        }
+
+        builder = builder.implement(Arrays.asList(interfaces));
 
         if (!StringUtils.isBlank(name)) {
             builder = builder.name(name);
@@ -58,8 +74,8 @@ public class ByteBuddyProxyClient implements ProxyClient {
 
         ClassLoader usedLoader = loader == null ? ProxyClient.DEFAULT_LOADER : loader;
 
-        builder =
-            builder.method(MATCHER).intercept(MethodDelegation.to(new GeneralInterceptor(interception, parent, proxy)));
+        builder = builder.method(MATCHER)
+            .intercept(MethodDelegation.to(new GeneralInterceptor(interception, proxy, superClass, interfaces)));
         ProxyClassLoader realLoader;
         if (usedLoader instanceof ProxyClassLoader) {
             realLoader = (ProxyClassLoader)usedLoader;
