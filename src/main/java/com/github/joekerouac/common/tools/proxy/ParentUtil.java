@@ -21,7 +21,7 @@ import com.github.joekerouac.common.tools.string.StringUtils;
 /**
  * @author JoeKerouac
  * @date 2025-02-14 17:28:40
- * @since 4.0.0
+ * @since 2.1.5
  */
 public class ParentUtil {
 
