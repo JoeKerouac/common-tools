@@ -53,7 +53,7 @@ public class NumberUtil {
      *            byte数组
      * @return 合并的short数据
      */
-    public static int mergeToShort(byte[] data) {
+    public static short mergeToShort(byte[] data) {
         return mergeToShort(data, 0);
     }
 
@@ -66,7 +66,7 @@ public class NumberUtil {
      *            byte数据起始位置
      * @return 合并为的short数据
      */
-    public static int mergeToShort(byte[] data, int offset) {
+    public static short mergeToShort(byte[] data, int offset) {
         return (short)(Byte.toUnsignedInt(data[offset]) << 8 | Byte.toUnsignedInt(data[1 + offset]));
     }
 
