@@ -47,6 +47,30 @@ public class NumberUtil {
     }
 
     /**
+     * 将2个byte数据合并为一个short数据，注意，数组必须包含2个及以上的byte数据，不然会报数组越界，内部没有进行越界检查；
+     *
+     * @param data
+     *            byte数组
+     * @return 合并的short数据
+     */
+    public static int mergeToShort(byte[] data) {
+        return mergeToShort(data, 0);
+    }
+
+    /**
+     * 将2个byte数据合并为一个short数据，注意，数组必须包含2个及以上的byte数据，不然会报数组越界，内部没有进行越界检查；
+     *
+     * @param data
+     *            byte数据
+     * @param offset
+     *            byte数据起始位置
+     * @return 合并为的short数据
+     */
+    public static int mergeToShort(byte[] data, int offset) {
+        return (short)(Byte.toUnsignedInt(data[offset]) << 8 | Byte.toUnsignedInt(data[1 + offset]));
+    }
+
+    /**
      * 将一个int拆分为4个byte
      * 
      * @param data
