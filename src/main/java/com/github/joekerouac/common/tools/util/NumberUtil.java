@@ -22,6 +22,33 @@ import java.util.Collection;
 public class NumberUtil {
 
     /**
+     * 将8个byte数据合并为一个int数据，注意，数组必须包含4个及以上的byte数据，不然会报数组越界，内部没有进行越界检查；
+     *
+     * @param data
+     *            byte数组
+     * @return 合并的long数据
+     */
+    public static long mergeToLong(byte[] data) {
+        return mergeToInt(data, 0);
+    }
+
+    /**
+     * 将8个byte数据合并为一个long数据，注意，offset位置开始往后必须包含4个及以上的byte数据，不然会报数组越界，内部没有进行越界检查；
+     *
+     * @param data
+     *            byte数据
+     * @param offset
+     *            byte数据起始位置
+     * @return 合并为的long数据
+     */
+    public static long mergeToLong(byte[] data, int offset) {
+        return Byte.toUnsignedLong(data[offset]) << 56 | Byte.toUnsignedLong(data[1 + offset]) << 48
+            | Byte.toUnsignedLong(data[2 + offset]) << 40 | Byte.toUnsignedLong(data[3 + offset]) << 32
+            | Byte.toUnsignedLong(data[4 + offset]) << 24 | Byte.toUnsignedLong(data[5 + offset]) << 16
+            | Byte.toUnsignedLong(data[6 + offset]) << 8 | Byte.toUnsignedLong(data[7 + offset]);
+    }
+
+    /**
      * 将4个byte数据合并为一个int数据，注意，数组必须包含4个及以上的byte数据，不然会报数组越界，内部没有进行越界检查；
      * 
      * @param data
@@ -71,19 +98,95 @@ public class NumberUtil {
     }
 
     /**
+     * 将一个long拆分为8个byte
+     *
+     * @param data
+     *            long数据
+     * @return 对应的8个byte
+     */
+    public static byte[] splitToByte(long data) {
+        return splitToByte(data, new byte[8], 0);
+    }
+
+    /**
+     * 将一个long拆分为8个byte
+     *
+     * @param data
+     *            long数据
+     * @param dst
+     *            要写出的目标位置
+     * @param offset
+     *            offset
+     * @return 对应的8个byte
+     */
+    public static byte[] splitToByte(long data, byte[] dst, int offset) {
+        dst[offset] = (byte)((data >>> 56) & 0xFF);
+        dst[1 + offset] = (byte)((data >>> 48) & 0xFF);
+        dst[2 + offset] = (byte)((data >>> 40) & 0xFF);
+        dst[3 + offset] = (byte)((data >>> 32) & 0xFF);
+        dst[4 + offset] = (byte)((data >>> 24) & 0xFF);
+        dst[5 + offset] = (byte)((data >>> 16) & 0XFF);
+        dst[6 + offset] = (byte)((data >>> 8) & 0XFF);
+        dst[7 + offset] = (byte)(data & 0XFF);
+        return dst;
+    }
+
+    /**
      * 将一个int拆分为4个byte
-     * 
+     *
      * @param data
      *            int数据
      * @return 对应的4个byte
      */
     public static byte[] splitToByte(int data) {
-        byte[] result = new byte[4];
-        result[0] = (byte)((data >>> 24) & 0xFF);
-        result[1] = (byte)((data >>> 16) & 0XFF);
-        result[2] = (byte)((data >>> 8) & 0XFF);
-        result[3] = (byte)(data & 0XFF);
-        return result;
+        return splitToByte(data, new byte[4], 0);
+    }
+
+    /**
+     * 将一个int拆分为4个byte
+     * 
+     * @param data
+     *            int数据
+     * @param dst
+     *            要写出的目标位置
+     * @param offset
+     *            offset
+     * @return 对应的4个byte
+     */
+    public static byte[] splitToByte(int data, byte[] dst, int offset) {
+        dst[offset] = (byte)((data >>> 24) & 0xFF);
+        dst[1 + offset] = (byte)((data >>> 16) & 0XFF);
+        dst[2 + offset] = (byte)((data >>> 8) & 0XFF);
+        dst[3 + offset] = (byte)(data & 0XFF);
+        return dst;
+    }
+
+    /**
+     * 将一个short拆分为2个byte
+     *
+     * @param data
+     *            short数据
+     * @return 对应的2个byte
+     */
+    public static byte[] splitToByte(short data) {
+        return splitToByte(data, new byte[2], 0);
+    }
+
+    /**
+     * 将一个short拆分为2个byte
+     *
+     * @param data
+     *            short数据
+     * @param dst
+     *            要写出的目标位置
+     * @param offset
+     *            offset
+     * @return 对应的2个byte
+     */
+    public static byte[] splitToByte(short data, byte[] dst, int offset) {
+        dst[offset] = (byte)((data >>> 8) & 0XFF);
+        dst[1 + offset] = (byte)(data & 0XFF);
+        return dst;
     }
 
     /**
