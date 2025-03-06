@@ -315,8 +315,6 @@ public class JavaTypeUtil {
      * @return 类继承父类时使用的泛型列表
      */
     public static List<JavaType> getDeclareGenericSuperclasses(Class<?> clazz) {
-        Assert.argNotNull(clazz, "clazz");
-
         Type genericSuperclass = clazz.getGenericSuperclass();
 
         // 如果不是ParameterizedType，说明类继承的时候没有使用泛型
@@ -393,7 +391,6 @@ public class JavaTypeUtil {
      *             当传入Class对象为null时抛出该异常
      */
     public static boolean isNotPojo(Class<?> clazz) throws NullPointerException {
-        Assert.argNotNull(clazz, "clazz");
         return isSimple(clazz) || Map.class.isAssignableFrom(clazz) || Collection.class.isAssignableFrom(clazz)
             || Date.class.isAssignableFrom(clazz) || Temporal.class.isAssignableFrom(clazz);
     }
@@ -420,8 +417,6 @@ public class JavaTypeUtil {
      *             当传入Class对象为null时抛出该异常
      */
     public static boolean isBasic(Class<?> clazz) throws NullPointerException {
-        Assert.argNotNull(clazz, "clazz");
-
         return Boolean.class.isAssignableFrom(clazz) || Character.class.isAssignableFrom(clazz)
             || Byte.class.isAssignableFrom(clazz) || Short.class.isAssignableFrom(clazz)
             || Integer.class.isAssignableFrom(clazz) || Long.class.isAssignableFrom(clazz)
@@ -438,7 +433,6 @@ public class JavaTypeUtil {
      *             当传入Class对象为空时抛出该异常
      */
     public static boolean isGeneralType(Class<?> clazz) throws NullPointerException {
-        Assert.argNotNull(clazz, "clazz");
         return clazz.isPrimitive();
     }
 
@@ -452,7 +446,6 @@ public class JavaTypeUtil {
      *             当传入Class对象为空时抛出该异常
      */
     public static boolean isGeneralArrayType(Class<?> clazz) throws NullPointerException {
-        Assert.argNotNull(clazz, "clazz");
         return clazz.isArray() && isGeneralType(toClass(getArrayDesc(clazz).getComponentType()));
     }
 
@@ -488,7 +481,6 @@ public class JavaTypeUtil {
      * @return ClassName，原生类型比较特殊，是int、boolean、byte等，数组的ClassName和签名一致，所以将会原封不动返回
      */
     public static String signToClassName(String jvmClassName) {
-        Assert.argNotBlank(jvmClassName, "jvmClassName");
         String packageClass = jvmClassName.trim().replaceAll("/", ".");
 
         String baseClass = null;
