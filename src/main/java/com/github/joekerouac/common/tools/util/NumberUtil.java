@@ -29,7 +29,7 @@ public class NumberUtil {
      * @return 合并的long数据
      */
     public static long mergeToLong(byte[] data) {
-        return mergeToInt(data, 0);
+        return mergeToLong(data, 0);
     }
 
     /**
