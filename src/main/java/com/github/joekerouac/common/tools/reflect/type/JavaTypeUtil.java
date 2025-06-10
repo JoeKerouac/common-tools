@@ -78,7 +78,9 @@ public class JavaTypeUtil {
 
     /**
      * 解析当实现类为指定childClass时，parentClass中泛型的实际类型
-     * 
+     *
+     * 注意，如果传入的类是lambda表达式，则无法拿到泛型信息;
+     *
      * @param childClass
      *            childClass
      * @param parentClass
