@@ -16,15 +16,12 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import javax.validation.constraints.NotNull;
-
-import com.github.joekerouac.common.tools.collection.CollectionUtil;
 
 import lombok.Data;
 import lombok.ToString;
@@ -55,12 +52,6 @@ public class JavaType implements Type {
      * 该类型的基本类型
      */
     protected Class<?> rawClass;
-
-    /**
-     * 该类型声明的泛型
-     */
-    @ToString.Exclude
-    protected LinkedHashMap<String, JavaType> bindings;
 
     /**
      * 原始类型
@@ -143,31 +134,6 @@ public class JavaType implements Type {
 
         if (rawType != null && !rawType.equals(javaType.rawType, contains, targetContains)) {
             return false;
-        }
-
-        int bindingsSize;
-        if ((bindingsSize = CollectionUtil.size(bindings)) != CollectionUtil.size(javaType.bindings)) {
-            return false;
-        }
-
-        if (bindingsSize > 0) {
-            for (Map.Entry<String, JavaType> entry : bindings.entrySet()) {
-                String key = entry.getKey();
-                JavaType value = entry.getValue();
-                JavaType binding = javaType.bindings.get(key);
-
-                if (value == null ^ binding == null) {
-                    return false;
-                }
-
-                if (value == null) {
-                    continue;
-                }
-
-                if (!value.equals(binding, contains, targetContains)) {
-                    return false;
-                }
-            }
         }
 
         return true;

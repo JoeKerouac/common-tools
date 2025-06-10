@@ -36,6 +36,7 @@ import com.github.joekerouac.common.tools.reflect.AccessorUtil;
 import com.github.joekerouac.common.tools.reflect.ClassUtils;
 import com.github.joekerouac.common.tools.reflect.bean.BeanUtils;
 import com.github.joekerouac.common.tools.reflect.bean.PropertyEditor;
+import com.github.joekerouac.common.tools.reflect.type.CustomParameterizedType;
 import com.github.joekerouac.common.tools.reflect.type.JavaType;
 import com.github.joekerouac.common.tools.reflect.type.JavaTypeUtil;
 import com.github.joekerouac.common.tools.string.StringUtils;
@@ -90,7 +91,10 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
         for (PropertyEditor editor : propertyEditors) {
             XmlNode xmlNode = editor.getAnnotation(XmlNode.class);
             final String fieldName = editor.name();
-            LinkedHashMap<String, JavaType> bindings = javaType.getBindings();
+            LinkedHashMap<String, JavaType> bindings = new LinkedHashMap<>();
+            if (javaType instanceof CustomParameterizedType) {
+                bindings = ((CustomParameterizedType)javaType).getBindings();
+            }
             JavaType javaType = JavaTypeUtil.createJavaType(editor.getGenericType(), bindings);
 
             // 节点名
@@ -397,7 +401,11 @@ public class BeanDeserializer<T> implements XmlDeserializer<T> {
      */
     @SuppressWarnings("unchecked")
     private <D extends XmlDeserializer<?>> D resolve(PropertyEditor editor) {
-        JavaType fieldType = JavaTypeUtil.createJavaType(editor.getGenericType(), this.javaType.getBindings());
+        LinkedHashMap<String, JavaType> bindings = new LinkedHashMap<>();
+        if (javaType instanceof CustomParameterizedType) {
+            bindings = ((CustomParameterizedType)javaType).getBindings();
+        }
+        JavaType fieldType = JavaTypeUtil.createJavaType(editor.getGenericType(), bindings);
 
         D deserializer = (D)parentDeserializers.get(fieldType);
         if (deserializer != null) {

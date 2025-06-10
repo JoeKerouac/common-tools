@@ -106,6 +106,58 @@ public class JavaTypeUtil {
         return bindings.values().toArray(new JavaType[0]);
     }
 
+    public static Type resolveToSystem(JavaType javaType) {
+        if (javaType instanceof SimpleType) {
+            return javaType.getRawClass();
+        } else if (javaType instanceof CustomParameterizedType) {
+            CustomParameterizedType customParameterizedType = (CustomParameterizedType)javaType;
+            Type rawType = resolveToSystem(javaType.getRawType());
+            Type ownerType = customParameterizedType.getOwnerType() == null ? null
+                : resolveToSystem(customParameterizedType.getOwnerType());
+            Type[] actualTypeArguments = customParameterizedType.getBindings().values().stream()
+                .map(JavaTypeUtil::resolveToSystem).toArray(Type[]::new);
+
+            return new ParameterizedType() {
+
+                @Override
+                public Type[] getActualTypeArguments() {
+                    return actualTypeArguments;
+                }
+
+                @Override
+                public Type getRawType() {
+                    return rawType;
+                }
+
+                @Override
+                public Type getOwnerType() {
+                    return ownerType;
+                }
+            };
+        } else if (javaType instanceof GenericType) {
+            GenericType genericType = (GenericType)javaType;
+            if (genericType.getParent() == null) {
+                throw new UnsupportedOperationException(StringUtils.format("不支持的泛型: [{}]", genericType));
+            }
+
+            return resolveToSystem(genericType.getParent());
+        } else if (javaType instanceof CustomGenericArrayType) {
+            CustomGenericArrayType customGenericArrayType = (CustomGenericArrayType)javaType;
+            int dimensions = customGenericArrayType.getDimensions();
+            Type current = (GenericArrayType)() -> resolveToSystem(customGenericArrayType.getComponentType());
+
+            while (--dimensions > 0) {
+                Type pre = current;
+                current = (GenericArrayType)() -> pre;
+            }
+
+            return current;
+        } else {
+            throw new UnsupportedOperationException(
+                StringUtils.format("不支持的类型: [{}], [{}]", javaType.getClass(), javaType));
+        }
+    }
+
     /**
      * 解析child到parent之间的继承路径，list顺序为从child -> parent，注意，需要外部自己检查非空、检查child实现/继承了parent
      * 
@@ -141,7 +193,7 @@ public class JavaTypeUtil {
             }
         } else {
             Type current = childType;
-            Class<?> clazz = null;
+            Class<?> clazz;
             do {
                 if (current instanceof ParameterizedType) {
                     clazz = (Class<?>)((ParameterizedType)current).getRawType();
@@ -226,7 +278,6 @@ public class JavaTypeUtil {
             Type[] parent = wildcardTypeImpl.getUpperBounds();
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
-            genericType.setBindings(new LinkedHashMap<>());
 
             // child和parent不可能都为空，如果用户是使用的一个单泛型T或者?，没有明确指出他的父类或者子类，例如T extends String、
             // T super String，那么就会有一个默认的parent，值是Object
@@ -251,7 +302,6 @@ public class JavaTypeUtil {
             TypeVariable<?> typeVariableImpl = (TypeVariable<?>)type;
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
-            genericType.setBindings(new LinkedHashMap<>());
 
             // 先从上下文获取，获取不到再构建
             JavaType rawType = context.get(typeName);
@@ -275,23 +325,24 @@ public class JavaTypeUtil {
 
             JavaType rawType = createJavaType(parameterizedTypeImpl.getRawType(), context);
 
-            TypeVariable<? extends Class<?>>[] typeParameters = rawType.getRawClass().getTypeParameters();
-
             LinkedHashMap<String, JavaType> currentBindings = new LinkedHashMap<>();
             for (int i = 0; i < types.length; i++) {
                 Type nowType = types[i];
-                TypeVariable<? extends Class<?>> typeParameter = typeParameters[i];
                 JavaType bindingType = createJavaType(nowType, context);
-                String bindingName = dealName(typeParameter.getTypeName());
+                String bindingName = bindingType.getName();
                 currentBindings.put(bindingName, bindingType);
                 context.put(bindingName, bindingType);
             }
 
-            SimpleType simpleType = new SimpleType();
-            simpleType.setName(typeName);
-            simpleType.setRawType(rawType);
-            simpleType.setBindings(currentBindings);
-            javaType = simpleType;
+            CustomParameterizedType customParameterizedType = new CustomParameterizedType();
+            customParameterizedType.setName(typeName);
+            customParameterizedType.setRawType(rawType);
+            customParameterizedType.setBindings(currentBindings);
+            Type ownerType = parameterizedTypeImpl.getOwnerType();
+            if (ownerType != null) {
+                customParameterizedType.setOwnerType(createJavaType(ownerType, context));
+            }
+            javaType = customParameterizedType;
         } else if (type instanceof GenericArrayType) {
             GenericArrayType genericArrayType = (GenericArrayType)type;
             javaType = getArrayDesc(genericArrayType, context);
@@ -302,47 +353,9 @@ public class JavaTypeUtil {
             if (clazz.isArray()) {
                 javaType = getArrayDesc(clazz, context);
             } else {
-                // 这里要先检查缓存，防止递归调用，例如String类实现了Comparable，泛型又是String，如果没有缓存，那么解析String的时候会在String -> Comparable ->
-                // String死循环
-                JavaType cache = context.get(clazz.getName());
-                if (cache != null) {
-                    return cache;
-                }
-
-                TypeVariable<? extends Class<?>>[] typeParameters = clazz.getTypeParameters();
-                LinkedHashMap<String, JavaType> currentBindings = new LinkedHashMap<>();
-
                 SimpleType simpleType = new SimpleType();
                 simpleType.setName(clazz.getName());
                 simpleType.setRawClass(clazz);
-                simpleType.setBindings(currentBindings);
-                context.put(simpleType.getName(), simpleType);
-
-                for (TypeVariable<? extends Class<?>> typeParameter : typeParameters) {
-                    JavaType bindingType = createJavaType(typeParameter, context);
-                    String bindingName = dealName(typeParameter.getTypeName());
-                    currentBindings.put(bindingType.getName(), bindingType);
-                    context.put(bindingName, bindingType);
-                }
-
-                if (clazz != Object.class && clazz.getGenericSuperclass() != null) {
-                    Type genericSuperclass = clazz.getGenericSuperclass();
-                    context.putAll(remap(currentBindings, genericSuperclass, context));
-                    simpleType.setParent(createJavaType(genericSuperclass, context));
-                }
-
-                Type[] interfaces = clazz.getGenericInterfaces();
-                if (interfaces.length > 0) {
-                    JavaType[] interfaceJavaTypes = new JavaType[interfaces.length];
-                    for (int i = 0; i < interfaceJavaTypes.length; i++) {
-                        context.putAll(remap(currentBindings, interfaces[i], context));
-                        interfaceJavaTypes[i] = createJavaType(interfaces[i], context);
-                    }
-                    simpleType.setInterfaces(interfaceJavaTypes);
-                } else {
-                    simpleType.setInterfaces(new JavaType[0]);
-                }
-
                 javaType = simpleType;
             }
         } else {
@@ -459,18 +472,19 @@ public class JavaTypeUtil {
         CustomGenericArrayType arrayDesc = new CustomGenericArrayType();
         arrayDesc.setName(type.getTypeName());
         arrayDesc.setComponentType(componentType);
-        arrayDesc.setRawClass(Array.newInstance(componentType.getRawClass(), now).getClass());
+        int[] dimensions = new int[now];
+        arrayDesc.setRawClass(Array.newInstance(componentType.getRawClass(), dimensions).getClass());
         arrayDesc.setDimensions(now);
         arrayDesc.setBindings(bindings);
         return arrayDesc;
     }
 
     private static LinkedHashMap<String, JavaType> getBindings(JavaType javaType) {
-        if (javaType instanceof SimpleType) {
-            return javaType.getBindings();
+        if (javaType instanceof CustomParameterizedType) {
+            return ((CustomParameterizedType)javaType).getBindings();
         } else if (javaType instanceof CustomGenericArrayType) {
             return getBindings(((CustomGenericArrayType)javaType).getComponentType());
-        } else if (javaType instanceof GenericType) {
+        } else if (javaType instanceof GenericType || javaType instanceof SimpleType) {
             return new LinkedHashMap<>();
         } else {
             throw new UnsupportedOperationException(

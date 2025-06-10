@@ -12,6 +12,7 @@
  */
 package com.github.joekerouac.common.tools.reflect.type;
 
+import java.util.LinkedHashMap;
 import java.util.Objects;
 
 import lombok.Getter;
@@ -40,6 +41,12 @@ public class CustomGenericArrayType extends JavaType {
      */
     private int dimensions;
 
+    /**
+     * 该类型声明的泛型
+     */
+    @ToString.Exclude
+    private LinkedHashMap<String, JavaType> bindings;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -52,7 +59,8 @@ public class CustomGenericArrayType extends JavaType {
             return false;
         }
         CustomGenericArrayType that = (CustomGenericArrayType)o;
-        return dimensions == that.dimensions && Objects.equals(componentType, that.componentType);
+        return dimensions == that.dimensions && Objects.equals(componentType, that.componentType)
+            && Objects.equals(bindings, that.bindings);
     }
 
     @Override

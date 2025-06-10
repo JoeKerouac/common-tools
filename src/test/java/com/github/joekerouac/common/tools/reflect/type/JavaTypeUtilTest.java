@@ -13,7 +13,10 @@
 package com.github.joekerouac.common.tools.reflect.type;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,18 +57,21 @@ public class JavaTypeUtilTest {
             Assert.assertEquals(list.get(0), list.get(1));
 
             for (JavaType javaType : list) {
-                Assert.assertTrue(javaType instanceof SimpleType);
-                SimpleType simpleType = (SimpleType)javaType;
-                Assert.assertEquals(simpleType.getRawClass(), Map.class);
-                Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 2);
+                Assert.assertTrue(javaType instanceof CustomParameterizedType);
+                CustomParameterizedType customParameterizedType = (CustomParameterizedType)javaType;
+                Assert.assertEquals(customParameterizedType.getRawClass(), Map.class);
+                Assert.assertEquals(CollectionUtil.size(customParameterizedType.getBindings()), 2);
 
-                Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(0) instanceof SimpleType);
-                SimpleType stringBaseType = (SimpleType)new ArrayList<>(simpleType.getBindings().values()).get(0);
+                Assert.assertTrue(
+                    new ArrayList<>(customParameterizedType.getBindings().values()).get(0) instanceof SimpleType);
+                SimpleType stringBaseType =
+                    (SimpleType)new ArrayList<>(customParameterizedType.getBindings().values()).get(0);
                 Assert.assertEquals(stringBaseType.getRawClass(), String.class);
-                Assert.assertEquals(CollectionUtil.size(stringBaseType.getBindings()), 0);
 
-                Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(1) instanceof SimpleType);
-                SimpleType listBaseType = (SimpleType)new ArrayList<>(simpleType.getBindings().values()).get(1);
+                Assert.assertTrue(new ArrayList<>(customParameterizedType.getBindings().values())
+                    .get(1) instanceof CustomParameterizedType);
+                CustomParameterizedType listBaseType =
+                    (CustomParameterizedType)new ArrayList<>(customParameterizedType.getBindings().values()).get(1);
                 Assert.assertEquals(listBaseType.getRawClass(), List.class);
                 Assert.assertEquals(CollectionUtil.size(listBaseType.getBindings()), 1);
                 Assert.assertTrue(new ArrayList<>(listBaseType.getBindings().values()).get(0) instanceof SimpleType);
@@ -78,14 +84,16 @@ public class JavaTypeUtilTest {
             // 现在BaseJavaType验证通过，依靠该场景进行下一步验证
             // 先验证匿名泛型场景
             JavaType javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<? extends String>>() {});
-            GenericType genericType = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(0);
+            GenericType genericType =
+                (GenericType)new ArrayList<>(((CustomParameterizedType)javaType).getBindings().values()).get(0);
             Assert.assertEquals(genericType.getName(), "?");
             Assert.assertTrue(genericType.getParent() instanceof SimpleType);
             Assert.assertEquals(genericType.getParent().getRawClass(), String.class);
 
             // 不指定parent，默认是Object的场景
             javaType = JavaTypeUtil.createJavaType(new AbstractTypeReference<List<?>>() {});
-            genericType = (GenericType)new ArrayList<>(javaType.getBindings().values()).get(0);
+            genericType =
+                (GenericType)new ArrayList<>(((CustomParameterizedType)javaType).getBindings().values()).get(0);
             Assert.assertEquals(genericType.getName(), "?");
             Assert.assertTrue(genericType.getParent() instanceof SimpleType);
             Assert.assertEquals(genericType.getParent().getRawClass(), Object.class);
@@ -94,8 +102,8 @@ public class JavaTypeUtilTest {
         {
             // 验证有名字的泛型
             Field field = A.class.getDeclaredField("map");
-            JavaType javaType = JavaTypeUtil.createJavaType(field.getGenericType());
-            Assert.assertTrue(javaType instanceof SimpleType);
+            CustomParameterizedType javaType =
+                (CustomParameterizedType)JavaTypeUtil.createJavaType(field.getGenericType());
             Assert.assertEquals(javaType.getRawClass(), Map.class);
             Assert.assertEquals(CollectionUtil.size(javaType.getBindings()), 2);
             Assert.assertTrue(new ArrayList<>(javaType.getBindings().values()).get(0) instanceof GenericType);
@@ -115,11 +123,13 @@ public class JavaTypeUtilTest {
 
             Assert.assertTrue(javaType instanceof GenericType);
             Assert.assertEquals(javaType.getName(), "T");
-            Assert.assertTrue(((GenericType)javaType).getParent() instanceof SimpleType);
-            SimpleType simpleType = (SimpleType)((GenericType)javaType).getParent();
-            Assert.assertEquals(simpleType.getRawClass(), List.class);
-            Assert.assertEquals(CollectionUtil.size(simpleType.getBindings()), 1);
-            Assert.assertTrue(new ArrayList<>(simpleType.getBindings().values()).get(0) instanceof GenericType);
+            Assert.assertTrue(((GenericType)javaType).getParent() instanceof CustomParameterizedType);
+            CustomParameterizedType customParameterizedType =
+                (CustomParameterizedType)((GenericType)javaType).getParent();
+            Assert.assertEquals(customParameterizedType.getRawClass(), List.class);
+            Assert.assertEquals(CollectionUtil.size(customParameterizedType.getBindings()), 1);
+            Assert.assertTrue(
+                new ArrayList<>(customParameterizedType.getBindings().values()).get(0) instanceof GenericType);
             JavaType javaType1 = JavaTypeUtil.createJavaType(method.getTypeParameters()[0]);
             // 递归依赖了，这里直接验证
             Assert.assertEquals(javaType1, javaType);
@@ -174,6 +184,44 @@ public class JavaTypeUtilTest {
 
     @Test
     public void baseTest() {
+        {
+            JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(C.class, A.class);
+            Assert.assertEquals(javaTypes[0].getRawClass(), Object.class);
+            Assert.assertTrue(javaTypes[1] instanceof CustomGenericArrayType);
+            CustomGenericArrayType genericArrayType = (CustomGenericArrayType)javaTypes[1];
+            Assert.assertEquals(genericArrayType.getComponentType().getRawClass(), Object.class);
+            Assert.assertEquals(genericArrayType.getDimensions(), 2);
+        }
+
+        {
+            JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(D.class, A.class);
+            Assert.assertTrue(javaTypes[0] instanceof CustomGenericArrayType);
+            Assert.assertTrue(javaTypes[1] instanceof CustomGenericArrayType);
+            CustomGenericArrayType genericArrayType = (CustomGenericArrayType)javaTypes[0];
+            Assert.assertEquals(genericArrayType.getDimensions(), 1);
+            Assert.assertEquals(genericArrayType.getComponentType().getRawClass(), Integer.class);
+
+            genericArrayType = (CustomGenericArrayType)javaTypes[1];
+            Assert.assertEquals(genericArrayType.getDimensions(), 2);
+            Assert.assertTrue(genericArrayType.getComponentType() instanceof CustomParameterizedType);
+
+            CustomParameterizedType componentType = (CustomParameterizedType)genericArrayType.getComponentType();
+            Assert.assertEquals(componentType.getRawClass(), List.class);
+            Assert.assertEquals(componentType.getBindings().size(), 1);
+            Assert.assertEquals(componentType.getBindings().get("java.lang.String").getRawClass(), String.class);
+        }
+
+        {
+            JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(D.class, B.class);
+
+            Type type = JavaTypeUtil.resolveToSystem(javaTypes[0]);
+            Assert.assertTrue(type instanceof ParameterizedType);
+            type = JavaTypeUtil.resolveToSystem(javaTypes[1]);
+            Assert.assertTrue(type instanceof GenericArrayType);
+            type = JavaTypeUtil.resolveToSystem(javaTypes[2]);
+            Assert.assertTrue(type instanceof ParameterizedType);
+        }
+
         // 基础测试，测试一些简单方法
         {
             Assert.assertEquals(Character.class, JavaTypeUtil.boxed(char.class));
