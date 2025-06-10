@@ -189,11 +189,11 @@ public class JavaTypeUtil {
             Class<?>[] interfaces = childClass.getInterfaces();
             for (int i = 0; i < genericInterfaces.length; i++) {
                 Class<?> interfaceClass = interfaces[i];
+                Type genericInterface = genericInterfaces[i];
                 if (interfaceClass.equals(parentClass)) {
-                    list.add(parentClass);
+                    list.add(genericInterface);
                     return list;
                 } else {
-                    Type genericInterface = genericInterfaces[i];
                     List<Type> resolve = resolveClassHierarchy(genericInterface, parentClass);
                     if (resolve != null) {
                         list.addAll(resolve);
