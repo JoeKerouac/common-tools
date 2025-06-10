@@ -19,6 +19,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.time.temporal.Temporal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +30,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.validation.constraints.NotNull;
 
 import com.github.joekerouac.common.tools.collection.CollectionUtil;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
@@ -74,6 +77,88 @@ public class JavaTypeUtil {
     }
 
     /**
+     * 解析当实现类为指定childClass时，parentClass中泛型的实际类型
+     * 
+     * @param childClass
+     *            childClass
+     * @param parentClass
+     *            parentClass
+     * @return parentClass中泛型的实际类型
+     */
+    public static JavaType[] resolveTypeArguments(@NotNull Class<?> childClass, @NotNull Class<?> parentClass) {
+        if (!parentClass.isAssignableFrom(childClass)) {
+            throw new IllegalArgumentException(StringUtils.format("指定类型不具备继承关系: [{}:{}]", childClass, parentClass));
+        }
+
+        TypeVariable<? extends Class<?>>[] typeParameters = parentClass.getTypeParameters();
+        if (typeParameters.length <= 0) {
+            return new JavaType[0];
+        }
+
+        List<Type> typeList = resolveClassHierarchy(childClass, parentClass);
+        LinkedHashMap<String, JavaType> context = new LinkedHashMap<>();
+        LinkedHashMap<String, JavaType> bindings = new LinkedHashMap<>();
+
+        for (Type type : typeList) {
+            bindings = remap(bindings, type, context);
+        }
+
+        return bindings.values().toArray(new JavaType[0]);
+    }
+
+    /**
+     * 解析child到parent之间的继承路径，list顺序为从child -> parent，注意，需要外部自己检查非空、检查child实现/继承了parent
+     * 
+     * @param childType
+     *            子类
+     * @param parentClass
+     *            父类
+     * @return 继承路径，如果没有继承关系，则返回null
+     */
+    public static List<Type> resolveClassHierarchy(@NotNull Type childType, @NotNull Class<?> parentClass) {
+        List<Type> list = new ArrayList<>();
+        list.add(childType);
+        Class<?> childClass;
+        if (childType instanceof ParameterizedType) {
+            childClass = (Class<?>)((ParameterizedType)childType).getRawType();
+        } else {
+            childClass = (Class<?>)childType;
+        }
+
+        if (parentClass.isInterface()) {
+            for (Type anInterface : childClass.getGenericInterfaces()) {
+                if (anInterface.equals(parentClass)) {
+                    list.add(parentClass);
+                    return list;
+                } else {
+                    List<Type> resolve = resolveClassHierarchy(anInterface, parentClass);
+                    if (resolve != null) {
+                        list.addAll(resolve);
+                        list.add(parentClass);
+                        return list;
+                    }
+                }
+            }
+        } else {
+            Type current = childType;
+            Class<?> clazz = null;
+            do {
+                if (current instanceof ParameterizedType) {
+                    clazz = (Class<?>)((ParameterizedType)current).getRawType();
+                } else {
+                    clazz = (Class<?>)current;
+                }
+
+                current = clazz.getGenericSuperclass();
+                list.add(current);
+            } while (clazz.getSuperclass() != parentClass);
+            return list;
+        }
+
+        return null;
+    }
+
+    /**
      * 根据TypeReference得出自定义类型
      *
      * @param type
@@ -114,17 +199,21 @@ public class JavaTypeUtil {
      *
      * @param type
      *            java反射取得的类型
-     * @param bindings
-     *            bindings
+     * @param resolved
+     *            当前已经解析过的类型
      * @return 自定义java类型说明
      */
-    public static JavaType createJavaType(Type type, LinkedHashMap<String, JavaType> bindings) {
+    public static JavaType createJavaType(Type type, LinkedHashMap<String, JavaType> resolved) {
+        if (type == null) {
+            return null;
+        }
+
         // type的来源：1、从方法参数上获取；2、从字段上获取；3、从类上获取；4、从继承上获取
         if (type instanceof JavaType) {
             return (JavaType)type;
         }
 
-        LinkedHashMap<String, JavaType> context = new LinkedHashMap<>(bindings);
+        LinkedHashMap<String, JavaType> context = new LinkedHashMap<>(resolved);
 
         String typeName = dealName(type.getTypeName());
         JavaType javaType;
@@ -153,9 +242,13 @@ public class JavaTypeUtil {
             genericType.setRawType(rawType);
             javaType = genericType;
         } else if (type instanceof TypeVariable) {
+            JavaType cache = resolved.get(typeName);
+            if (cache != null) {
+                return cache;
+            }
+
             // 该类型是名字确定的泛型，例如T等，需要先声明后使用，区别于WildcardType，WildcardType类型的泛型不需要声明可以直接使用；
             TypeVariable<?> typeVariableImpl = (TypeVariable<?>)type;
-
             GenericType genericType = new GenericType();
             genericType.setName(typeName);
             genericType.setBindings(new LinkedHashMap<>());
@@ -209,17 +302,46 @@ public class JavaTypeUtil {
             if (clazz.isArray()) {
                 javaType = getArrayDesc(clazz, context);
             } else {
+                // 这里要先检查缓存，防止递归调用，例如String类实现了Comparable，泛型又是String，如果没有缓存，那么解析String的时候会在String -> Comparable ->
+                // String死循环
+                JavaType cache = context.get(clazz.getName());
+                if (cache != null) {
+                    return cache;
+                }
+
                 TypeVariable<? extends Class<?>>[] typeParameters = clazz.getTypeParameters();
-                LinkedHashMap<String, JavaType> currentBindings =
-                    Arrays.stream(typeParameters).map(t -> createJavaType(t, context))
-                        .collect(Collectors.toMap(JavaType::getName, t -> t, (u, v) -> {
-                            throw new IllegalStateException(String.format("Duplicate key %s", u));
-                        }, LinkedHashMap::new));
+                LinkedHashMap<String, JavaType> currentBindings = new LinkedHashMap<>();
 
                 SimpleType simpleType = new SimpleType();
                 simpleType.setName(clazz.getName());
                 simpleType.setRawClass(clazz);
                 simpleType.setBindings(currentBindings);
+                context.put(simpleType.getName(), simpleType);
+
+                for (TypeVariable<? extends Class<?>> typeParameter : typeParameters) {
+                    JavaType bindingType = createJavaType(typeParameter, context);
+                    String bindingName = dealName(typeParameter.getTypeName());
+                    currentBindings.put(bindingType.getName(), bindingType);
+                    context.put(bindingName, bindingType);
+                }
+
+                if (clazz != Object.class && clazz.getGenericSuperclass() != null) {
+                    Type genericSuperclass = clazz.getGenericSuperclass();
+                    context.putAll(remap(currentBindings, genericSuperclass, context));
+                    simpleType.setParent(createJavaType(genericSuperclass, context));
+                }
+
+                Type[] interfaces = clazz.getGenericInterfaces();
+                if (interfaces.length > 0) {
+                    JavaType[] interfaceJavaTypes = new JavaType[interfaces.length];
+                    for (int i = 0; i < interfaceJavaTypes.length; i++) {
+                        context.putAll(remap(currentBindings, interfaces[i], context));
+                        interfaceJavaTypes[i] = createJavaType(interfaces[i], context);
+                    }
+                    simpleType.setInterfaces(interfaceJavaTypes);
+                } else {
+                    simpleType.setInterfaces(new JavaType[0]);
+                }
 
                 javaType = simpleType;
             }
@@ -227,7 +349,60 @@ public class JavaTypeUtil {
             throw new CommonException(ErrorCodeEnum.UNKNOWN_EXCEPTION, "type[" + type + "]类型未知");
         }
 
+        javaType.setOrigin(type);
+
         return javaType;
+    }
+
+    /**
+     * 重新映射当前类绑定的泛型，主要应对下面的场景，当我们有如下两个定义时: <br>
+     * public interface MyInterface&lt;T&gt; <br>
+     * public Class MyInterfaceImpl&lt;M&gt; extends MyInterface&lt;M&gt; <br>
+     * MyInterface中的泛型T在解析MyInterfaceImpl时实际名字为M，如果将这个泛型名放入上下文时，解析MyInterface时将无法解析出泛型T的类型，因为两个名字不一致，实际
+     * 上泛型T是可以解析出来的，我们只需要将M映射到T即可，这个方法就是做这个的
+     * 
+     * @param currentBindings
+     *            当前类上声明的泛型
+     * @param superType
+     *            继承的父类/接口类型
+     * @param resolved
+     *            当前解析缓存
+     * @return 父类/接口中的泛型解析结果
+     */
+    public static LinkedHashMap<String, JavaType> remap(LinkedHashMap<String, JavaType> currentBindings, Type superType,
+        LinkedHashMap<String, JavaType> resolved) {
+        LinkedHashMap<String, JavaType> bindings = new LinkedHashMap<>();
+
+        if (!(superType instanceof ParameterizedType)) {
+            return bindings;
+        }
+
+        ParameterizedType parameterizedType = (ParameterizedType)superType;
+        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+        // 理论上这里肯定是class
+        Class<?> clazz = (Class<?>)parameterizedType.getRawType();
+        // 原始类型上声明的泛型
+        TypeVariable<? extends Class<?>>[] typeParameters = clazz.getTypeParameters();
+        for (int i = 0; i < typeParameters.length; i++) {
+            Type actualTypeArgument = actualTypeArguments[i];
+            JavaType javaType;
+            if (actualTypeArgument instanceof GenericArrayType) {
+                javaType = getArrayDesc(actualTypeArgument, currentBindings);
+            } else {
+                String name = dealName(actualTypeArgument.getTypeName());
+                javaType = currentBindings.get(name);
+            }
+
+            if (javaType == null) {
+                javaType = createJavaType(actualTypeArgument, resolved);
+            }
+
+            javaType.setOrigin(actualTypeArgument);
+            bindings.put(dealName(typeParameters[i].getTypeName()), javaType);
+            resolved.put(dealName(typeParameters[i].getTypeName()), javaType);
+        }
+
+        return bindings;
     }
 
     /**

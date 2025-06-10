@@ -26,4 +26,16 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class SimpleType extends JavaType {
 
+    /**
+     * 该类型的父类型，注意，如果rawClass是Object.class，那么该值为null
+     */
+    @ToString.Exclude
+    private JavaType parent;
+
+    /**
+     * 该类型的接口
+     */
+    @ToString.Exclude
+    private JavaType[] interfaces;
+
 }
