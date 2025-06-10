@@ -184,6 +184,7 @@ public class JavaTypeUtilTest {
 
     @Test
     public void baseTest() {
+        // 基础测试，测试一些简单方法
         {
             JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(C.class, A.class);
             Assert.assertEquals(javaTypes[0].getRawClass(), Object.class);
@@ -222,7 +223,20 @@ public class JavaTypeUtilTest {
             Assert.assertTrue(type instanceof ParameterizedType);
         }
 
-        // 基础测试，测试一些简单方法
+        {
+            A<String, List<String>> a = new A<String, List<String>>() {
+
+            };
+            JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(a.getClass(), A.class);
+            Assert.assertNotNull(javaTypes);
+            Assert.assertEquals(javaTypes.length, 2);
+            Assert.assertEquals(JavaTypeUtil.resolveToSystem(javaTypes[0]), String.class);
+            Assert.assertTrue(JavaTypeUtil.resolveToSystem(javaTypes[1]) instanceof ParameterizedType);
+            ParameterizedType parameterizedType = (ParameterizedType)JavaTypeUtil.resolveToSystem(javaTypes[1]);
+            Assert.assertEquals(parameterizedType.getRawType(), List.class);
+            Assert.assertEquals(parameterizedType.getActualTypeArguments()[0], String.class);
+        }
+
         {
             Assert.assertEquals(Character.class, JavaTypeUtil.boxed(char.class));
             Assert.assertEquals(Byte.class, JavaTypeUtil.boxed(byte.class));
