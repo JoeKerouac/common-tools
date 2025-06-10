@@ -224,6 +224,7 @@ public class JavaTypeUtilTest {
         }
 
         {
+            // 匿名内部类可以拿到泛型信息
             A<String, List<String>> a = new A<String, List<String>>() {
 
             };
@@ -235,6 +236,13 @@ public class JavaTypeUtilTest {
             ParameterizedType parameterizedType = (ParameterizedType)JavaTypeUtil.resolveToSystem(javaTypes[1]);
             Assert.assertEquals(parameterizedType.getRawType(), List.class);
             Assert.assertEquals(parameterizedType.getActualTypeArguments()[0], String.class);
+        }
+
+        {
+            // lambda表达式拿不到泛型信息
+            MyInterface<String> myInterface = System.out::println;
+            JavaType[] javaTypes = JavaTypeUtil.resolveTypeArguments(myInterface.getClass(), MyInterface.class);
+            Assert.assertEquals(javaTypes.length, 0);
         }
 
         {
@@ -345,6 +353,12 @@ public class JavaTypeUtilTest {
     }
 
     public void method3(List<?> list) {
+
+    }
+
+    interface MyInterface<T> {
+
+        void test(T msg);
 
     }
 
