@@ -106,6 +106,13 @@ public class JavaTypeUtil {
         return bindings.values().toArray(new JavaType[0]);
     }
 
+    /**
+     * 将自定义JavaType转换为系统的Type
+     * 
+     * @param javaType
+     *            自定义JavaType
+     * @return 系统的Type
+     */
     public static Type resolveToSystem(JavaType javaType) {
         if (javaType instanceof SimpleType) {
             return javaType.getRawClass();
