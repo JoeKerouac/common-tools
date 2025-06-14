@@ -44,11 +44,11 @@ public class CollectionUtil {
      *            分组大小
      * @param function
      *            转换函数
-     * @return 转换结果
      * @param <T>
      *            源数据集类型
      * @param <R>
      *            结果数据集类型
+     * @return 转换结果
      */
     public static <T, R> List<R> groupConvert(Collection<T> collection, int groupSize,
         Function<List<T>, List<R>> function) {
