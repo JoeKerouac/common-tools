@@ -15,9 +15,11 @@ package com.github.joekerouac.common.tools.collection;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import lombok.AccessLevel;
@@ -32,6 +34,63 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CollectionUtil {
+
+    /**
+     * 将给定集合分组转换为另外一个集合
+     * 
+     * @param collection
+     *            集合
+     * @param groupSize
+     *            分组大小
+     * @param function
+     *            转换函数
+     * @return 转换结果
+     * @param <T>
+     *            源数据集类型
+     * @param <R>
+     *            结果数据集类型
+     */
+    public static <T, R> List<R> groupConvert(Collection<T> collection, int groupSize,
+        Function<List<T>, List<R>> function) {
+        if (isEmpty(collection)) {
+            return Collections.emptyList();
+        }
+
+        int start = 0;
+        List<T> list = collection instanceof List ? (List<T>)collection : new ArrayList<>(collection);
+        List<R> result = new ArrayList<>(list.size());
+        do {
+            List<R> convertList = function.apply(list.subList(start, Math.min(start + groupSize, list.size())));
+            result.addAll(convertList);
+            start += groupSize;
+        } while (start < list.size());
+        return result;
+    }
+
+    /**
+     * 分组消费给定集合
+     * 
+     * @param collection
+     *            集合
+     * @param groupSize
+     *            分组大小
+     * @param consumer
+     *            消费者
+     * @param <T>
+     *            源数据集类型
+     */
+    public static <T> void groupConsume(Collection<T> collection, int groupSize, Consumer<List<T>> consumer) {
+        if (isEmpty(collection)) {
+            return;
+        }
+
+        int start = 0;
+        List<T> list = collection instanceof List ? (List<T>)collection : new ArrayList<>(collection);
+        do {
+            consumer.accept(list.subList(start, Math.min(start + groupSize, list.size())));
+            start += groupSize;
+        } while (start < list.size());
+    }
 
     /**
      * 矩阵转置（矩阵必须每行的列数都一样）（行变列，列变行）
