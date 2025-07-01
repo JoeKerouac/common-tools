@@ -336,7 +336,9 @@ public class HttpClientUtil {
         }
 
         LOGGER.debug("HttpClient初始化完毕");
-        return builder.build();
+        CloseableHttpAsyncClient client = builder.build();
+        client.start();
+        return client;
     }
 
     /**
