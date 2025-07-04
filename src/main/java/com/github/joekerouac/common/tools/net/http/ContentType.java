@@ -12,6 +12,9 @@
  */
 package com.github.joekerouac.common.tools.net.http;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * @since 1.0.0
  * @author JoeKerouac
@@ -19,10 +22,17 @@ package com.github.joekerouac.common.tools.net.http;
  */
 public final class ContentType {
 
+    private static final Set<String> printableContentTypeSet = new HashSet<>();
+
     /**
      * text/plain
      */
     public static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
+
+    /**
+     * text/html
+     */
+    public static final String CONTENT_TYPE_TEXT_HTML = "text/html";
 
     /**
      * json类型数据
@@ -73,4 +83,29 @@ public final class ContentType {
      * 图片:tiff
      */
     public static final String CONTENT_TYPE_IMG_TIFF = "image/tiff";
+
+    static {
+        printableContentTypeSet.add(CONTENT_TYPE_TEXT_PLAIN);
+        printableContentTypeSet.add(CONTENT_TYPE_TEXT_HTML);
+        printableContentTypeSet.add(CONTENT_TYPE_JSON);
+        printableContentTypeSet.add(CONTENT_TYPE_XML);
+        printableContentTypeSet.add(CONTENT_TYPE_FORM);
+    }
+
+    /**
+     * 判断content type对应的body是否可打印
+     * 
+     * @param contentType
+     *            content type
+     * @return true表示可打印
+     */
+    public static boolean printable(String contentType) {
+        for (String printableContentType : printableContentTypeSet) {
+            if (contentType.contains(printableContentType)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

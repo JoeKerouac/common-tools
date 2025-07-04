@@ -18,6 +18,8 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +35,7 @@ import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
 import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient;
 import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpResponse;
 import org.apache.hc.core5.http.Message;
@@ -47,6 +50,9 @@ import com.github.joekerouac.common.tools.concurrent.FutureCallback;
 import com.github.joekerouac.common.tools.concurrent.ResultConvertFuture;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
+import com.github.joekerouac.common.tools.log.EndpointLogService;
+import com.github.joekerouac.common.tools.log.Logger;
+import com.github.joekerouac.common.tools.log.LoggerFactory;
 import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
 import com.github.joekerouac.common.tools.net.http.entity.StreamAsyncEntityConsumer;
 import com.github.joekerouac.common.tools.net.http.exception.UnknownException;
@@ -62,6 +68,8 @@ import com.github.joekerouac.common.tools.util.Assert;
  * @since 2.1.0
  */
 public class HttpRequestUtil {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequestUtil.class);
 
     private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
@@ -610,10 +618,18 @@ public class HttpRequestUtil {
         Assert.assertTrue(body == null || StringUtils.isNotBlank(charset), "body不为空时charset也不能为空",
             ExceptionProviderConst.IllegalArgumentExceptionProvider);
 
+        String finalMimeType = StringUtils.getOrDefault(mimeType, DEFAULT_MIME_TYPE);
+
+        boolean printable = com.github.joekerouac.common.tools.net.http.ContentType.printable(finalMimeType);
+        printable = printable && body != null && body.length > 0;
+        EndpointLogService logService =
+            new EndpointLogService(url, !printable ? null : new String(body, Charset.forName(charset)), LOGGER);
+        logService.addContext("method", method);
+
         FutureCallback<IHttpResponse> callback = futureCallback == null ? EMPTY_CALLBACK : futureCallback;
 
-        AsyncRequestProducer requestProducer = buildSimpleHttpRequest(url, method.name(), headers, body, charset, files,
-            StringUtils.getOrDefault(mimeType, DEFAULT_MIME_TYPE), httpConfig);
+        AsyncRequestProducer requestProducer =
+            buildSimpleHttpRequest(url, method.name(), headers, body, charset, files, finalMimeType, httpConfig);
 
         BasicResponseConsumer<InMemoryFile> responseConsumer =
             new BasicResponseConsumer<>(new StreamAsyncEntityConsumer(httpConfig.getInitBufferSize(),
@@ -624,6 +640,41 @@ public class HttpRequestUtil {
             new org.apache.hc.core5.concurrent.FutureCallback<Message<HttpResponse, InMemoryFile>>() {
                 @Override
                 public void completed(Message<HttpResponse, InMemoryFile> message) {
+                    HttpResponse head = message.getHead();
+                    Map<String, List<Object>> headerMap = new HashMap<>();
+                    String contentType = null;
+                    for (Header header : head.getHeaders()) {
+                        headerMap.computeIfAbsent(header.getName(), k -> new ArrayList<>()).add(header.getValue());
+                        if (header.getName().equalsIgnoreCase("content-type")) {
+                            contentType = header.getValue();
+                        }
+                    }
+
+                    boolean printable = contentType != null
+                        && com.github.joekerouac.common.tools.net.http.ContentType.printable(contentType);
+                    InMemoryFile responseBody = message.getBody();
+                    String result = null;
+                    if (printable && responseBody != null && responseBody.getLen() > 0) {
+                        Charset responseCharset = responseBody.getCharset();
+                        if (responseCharset == null && StringUtils.isNotBlank(charset)) {
+                            responseCharset = Charset.forName(charset);
+                        }
+
+                        if (responseCharset == null) {
+                            responseCharset = StandardCharsets.UTF_8;
+                        }
+
+                        try {
+                            result = new String(responseBody.getData(), responseCharset);
+                        } catch (IOException e) {
+                            // 忽略异常
+                        }
+                    }
+
+                    logService.addContext("http_status", head.getCode());
+                    logService.addContext("responseHeader", headerMap);
+                    logService.finish(result, "http-request-success", null, true);
+
                     IHttpResponse response = new IHttpResponse(message);
                     callback.success(response);
                     callback.complete(response, null, 0);
@@ -631,12 +682,14 @@ public class HttpRequestUtil {
 
                 @Override
                 public void failed(Exception ex) {
+                    logService.finish(null, "http-request-fail", ex, false);
                     callback.failed(ex);
                     callback.complete(null, ex, 1);
                 }
 
                 @Override
                 public void cancelled() {
+                    logService.finish(null, "http-request-cancel", null, false);
                     callback.cancelled();
                     callback.complete(null, null, 2);
                 }
@@ -689,7 +742,7 @@ public class HttpRequestUtil {
 
             files
                 .forEach(file -> entityBuilder.addBinaryBody(file.getName(), file.getFile(),
-                    org.apache.hc.core5.http.ContentType.create(file.getContentType(),
+                    ContentType.create(file.getContentType(),
                         StringUtils.getOrDefault(file.getCharset(), Charset.defaultCharset().name())),
                     file.getFileName()));
 
