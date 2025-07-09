@@ -50,7 +50,6 @@ import com.github.joekerouac.common.tools.concurrent.FutureCallback;
 import com.github.joekerouac.common.tools.concurrent.ResultConvertFuture;
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
-import com.github.joekerouac.common.tools.log.EndpointLogService;
 import com.github.joekerouac.common.tools.log.Logger;
 import com.github.joekerouac.common.tools.log.LoggerFactory;
 import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
@@ -620,12 +619,6 @@ public class HttpRequestUtil {
 
         String finalMimeType = StringUtils.getOrDefault(mimeType, DEFAULT_MIME_TYPE);
 
-        boolean printable = com.github.joekerouac.common.tools.net.http.ContentType.printable(finalMimeType);
-        printable = printable && body != null && body.length > 0;
-        EndpointLogService logService =
-            new EndpointLogService(url, !printable ? null : new String(body, Charset.forName(charset)), LOGGER);
-        logService.addContext("method", method);
-
         FutureCallback<IHttpResponse> callback = futureCallback == null ? EMPTY_CALLBACK : futureCallback;
 
         AsyncRequestProducer requestProducer =
@@ -671,10 +664,6 @@ public class HttpRequestUtil {
                         }
                     }
 
-                    logService.addContext("http_status", head.getCode());
-                    logService.addContext("responseHeader", headerMap);
-                    logService.finish(result, "http-request-success", null, true);
-
                     IHttpResponse response = new IHttpResponse(message);
                     callback.success(response);
                     callback.complete(response, null, 0);
@@ -682,14 +671,12 @@ public class HttpRequestUtil {
 
                 @Override
                 public void failed(Exception ex) {
-                    logService.finish(null, "http-request-fail", ex, false);
                     callback.failed(ex);
                     callback.complete(null, ex, 1);
                 }
 
                 @Override
                 public void cancelled() {
-                    logService.finish(null, "http-request-cancel", null, false);
                     callback.cancelled();
                     callback.complete(null, null, 2);
                 }
