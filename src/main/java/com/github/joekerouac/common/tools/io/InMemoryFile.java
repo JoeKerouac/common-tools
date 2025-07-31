@@ -53,7 +53,7 @@ public class InMemoryFile implements Closeable {
      */
     private final StreamFilter filter;
 
-    private OutputStream outputStream;
+    private volatile OutputStream outputStream;
 
     private volatile File file;
 
@@ -350,6 +350,7 @@ public class InMemoryFile implements Closeable {
         public InMemoryFileInputStream(InputStream inputStream, InMemoryFile inMemoryFile) {
             this.inputStream = inputStream;
             this.inMemoryFile = inMemoryFile;
+            ReferenceUtils.listenDestroy(this, () -> IOUtils.close(inputStream));
         }
 
         @Override
