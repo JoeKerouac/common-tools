@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.github.joekerouac.common.tools.io.InMemoryFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * 用于处理LocalDateTime
@@ -33,7 +34,9 @@ public class InMemoryFileSerializer extends JsonSerializer<InMemoryFile> impleme
     @Override
     public void serialize(final InMemoryFile value, final JsonGenerator gen, final SerializerProvider serializers)
         throws IOException {
-        gen.writeBinary(value.getDataAsInputStream(), value.getLen());
+        try (InputStream inputStream = value.getDataAsInputStream()) {
+            gen.writeBinary(inputStream, value.getLen());
+        }
     }
 
 }
