@@ -56,8 +56,8 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 import org.apache.hc.core5.pool.PoolConcurrencyPolicy;
 import org.apache.hc.core5.pool.PoolReusePolicy;
 import org.apache.hc.core5.reactor.IOReactorConfig;
+import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.hc.core5.util.TimeValue;
-import org.apache.http.ssl.SSLContexts;
 
 import com.github.joekerouac.common.tools.net.http.config.HttpProxy;
 import com.github.joekerouac.common.tools.net.http.config.IHttp1config;
