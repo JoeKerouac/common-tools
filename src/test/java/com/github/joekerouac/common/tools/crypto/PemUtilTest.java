@@ -48,7 +48,7 @@ public class PemUtilTest {
             Object read = PemUtil.read(write.getBytes(), "RSA");
             Assert.assertTrue(read instanceof PrivateKey);
 
-            read = PemUtil.read(write.getBytes());
+            read = PemUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof PrivateKey);
 
             read = PemUtil.read(privateKey.getEncoded(), "RSA");
@@ -64,7 +64,7 @@ public class PemUtilTest {
             Object read = PemUtil.read(write.getBytes(), "RSA");
             Assert.assertTrue(read instanceof PublicKey);
 
-            read = PemUtil.read(write.getBytes());
+            read = PemUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof PublicKey);
 
             read = PemUtil.read(publicKey.getEncoded(), "RSA");
@@ -95,7 +95,7 @@ public class PemUtilTest {
             Object read = PemUtil.read(write.getBytes(), "X.509");
             Assert.assertTrue(read instanceof X509Certificate);
 
-            read = PemUtil.read(write.getBytes());
+            read = PemUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof X509Certificate);
 
             read = PemUtil.read(certificate.getEncoded(), "X.509");

@@ -36,8 +36,10 @@ import java.util.Base64;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.bc.BcPEMDecryptorProvider;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 
@@ -57,6 +59,86 @@ public class PemUtil {
     private static final String CERT_NAME = "X.509";
 
     /**
+     * 从给定密钥数据中读取私钥
+     *
+     * @param keyData
+     *            密钥数据，支持pem格式、X.509编码的公钥、PKCS#8编码的私钥以及X.509编码的公钥、PKCS#8编码的私钥的base64
+     * @param keyAlgorithm
+     *            key算法
+     * @return 私钥
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     * @throws CertificateException
+     *             CertificateException
+     */
+    public static PrivateKey readPrivateKey(byte[] keyData, String keyAlgorithm)
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
+        Object read = read(keyData, keyAlgorithm, null);
+        if (read instanceof PrivateKey) {
+            return (PrivateKey)read;
+        } else if (read instanceof KeyPair) {
+            return ((KeyPair)read).getPrivate();
+        } else {
+            throw new IllegalArgumentException(StringUtils.format("提供的密钥类型不是私钥，实际为: [{}]", read.getClass()));
+        }
+    }
+
+    /**
+     * 从给定密钥数据中读取公钥
+     *
+     * @param keyData
+     *            密钥数据，支持pem格式、X.509编码的公钥、PKCS#8编码的私钥以及X.509编码的公钥、PKCS#8编码的私钥的base64
+     * @param keyAlgorithm
+     *            key算法
+     * @return 公钥
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     * @throws CertificateException
+     *             CertificateException
+     */
+    public static PublicKey readPublicKey(byte[] keyData, String keyAlgorithm)
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
+        Object read = read(keyData, keyAlgorithm, null);
+        if (read instanceof PublicKey) {
+            return (PublicKey)read;
+        } else if (read instanceof KeyPair) {
+            return ((KeyPair)read).getPublic();
+        } else if (read instanceof Certificate) {
+            return ((Certificate)read).getPublicKey();
+        } else {
+            throw new IllegalArgumentException(StringUtils.format("提供的密钥类型不是私钥，实际为: [{}]", read.getClass()));
+        }
+    }
+
+    /**
+     * 从pem中读取key数据
+     *
+     * @param keyData
+     *            pem数据
+     * @param keyAlgorithm
+     *            key算法
+     * @return pem中读取到的数据
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     */
+    public static KeyPair readKeyPair(byte[] keyData, String keyAlgorithm)
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
+        return read(keyData, keyAlgorithm, null);
+    }
+
+    /**
      * 将密钥数据反序列化为对象
      *
      * @param keyData
@@ -73,10 +155,34 @@ public class PemUtil {
      * @throws InvalidKeySpecException
      *             InvalidKeySpecException
      */
-    @SuppressWarnings("unchecked")
     public static <T> T read(byte[] keyData, String keyAlgorithm)
         throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
-        Object read = read(keyData);
+        return read(keyData, keyAlgorithm, null);
+    }
+
+    /**
+     * 将密钥数据反序列化为对象
+     *
+     * @param keyData
+     *            密钥数据，支持pem格式、X.509编码的公钥、PKCS#8编码的私钥以及X.509编码的公钥、PKCS#8编码的私钥的base64
+     * @param keyAlgorithm
+     *            key算法
+     * @param password
+     *            密码，如果密钥是加密的，需要传入密码
+     * @param <T>
+     *            key类型
+     * @return pem中读取到的数据
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T read(byte[] keyData, String keyAlgorithm, char[] password)
+        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
+        Object read = readFromPEM(keyData, password);
 
         if (read != null) {
             return (T)read;
@@ -138,19 +244,37 @@ public class PemUtil {
      * @return 密钥对象，根据文件内容确定返回密钥对象类型
      * @throws NoSuchAlgorithmException
      *             NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     *             InvalidKeyException
      * @throws InvalidKeySpecException
      *             InvalidKeySpecException
      */
-    public static <T> T read(InputStream inputStream)
-        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
-        return read(IOUtils.read(inputStream, true));
+    public static <T> T readFromPEM(InputStream inputStream)
+        throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
+        return readFromPEM(IOUtils.read(inputStream, true), null);
     }
 
     /**
      * 将pem编码的密钥转换为对应的密钥对象，pem编码的文件以-----BEGIN xxxx-----开头
-     * 
+     *
+     * @param inputStream
+     *            pem编码的密钥输入流
+     * @param password
+     *            密码，如果密钥是加密的，需要传入密码
+     * @param <T>
+     *            密钥的实际类型
+     * @return 密钥对象，根据文件内容确定返回密钥对象类型
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     */
+    public static <T> T readFromPEM(InputStream inputStream, char[] password)
+        throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
+        return readFromPEM(IOUtils.read(inputStream, true), password);
+    }
+
+    /**
+     * 将pem编码的密钥转换为对应的密钥对象，pem编码的文件以-----BEGIN xxxx-----开头
+     *
      * @param data
      *            pem编码的密钥
      * @param <T>
@@ -158,14 +282,32 @@ public class PemUtil {
      * @return 密钥对象，根据文件内容确定返回密钥对象类型
      * @throws NoSuchAlgorithmException
      *             NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     *             InvalidKeyException
+     * @throws InvalidKeySpecException
+     *             InvalidKeySpecException
+     */
+    public static <T> T readFromPEM(byte[] data)
+        throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
+        return readFromPEM(data, null);
+    }
+
+    /**
+     * 将pem编码的密钥转换为对应的密钥对象，pem编码的文件以-----BEGIN xxxx-----开头
+     *
+     * @param data
+     *            pem编码的密钥
+     * @param password
+     *            密码，如果密钥是加密的，需要传入密码
+     * @param <T>
+     *            密钥的实际类型
+     * @return 密钥对象，根据文件内容确定返回密钥对象类型
+     * @throws NoSuchAlgorithmException
+     *             NoSuchAlgorithmException
      * @throws InvalidKeySpecException
      *             InvalidKeySpecException
      */
     @SuppressWarnings("unchecked")
-    public static <T> T read(byte[] data)
-        throws NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException, CertificateException {
+    public static <T> T readFromPEM(byte[] data, char[] password)
+        throws NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
         PEMParser parser = new PEMParser(new StringReader(new String(data, StandardCharsets.UTF_8)));
         Object read;
         try {
@@ -173,6 +315,16 @@ public class PemUtil {
         } catch (IOException e) {
             // 数据格式不对时抛出该异常
             throw new CryptoException("pem数据读取失败", e);
+        }
+
+        if (read instanceof PEMEncryptedKeyPair) {
+            try {
+                // 这里解析出来是PEMKeyPair，走后边的PEMKeyPair逻辑
+                read = ((PEMEncryptedKeyPair)read)
+                    .decryptKeyPair(new BcPEMDecryptorProvider(password == null ? new char[0] : password));
+            } catch (IOException e) {
+                throw new RuntimeException("密钥解析失败", e);
+            }
         }
 
         if (read instanceof PEMKeyPair || read instanceof SubjectPublicKeyInfo || read instanceof PrivateKeyInfo) {
@@ -234,7 +386,6 @@ public class PemUtil {
         }
 
         return (T)read;
-
     }
 
     /**
