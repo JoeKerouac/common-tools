@@ -54,7 +54,7 @@ import com.github.joekerouac.common.tools.string.StringUtils;
  * @date 2022-10-14 14:37:00
  * @since 1.0.0
  */
-public class PemUtil {
+public class KeyUtil {
 
     private static final String CERT_NAME = "X.509";
 

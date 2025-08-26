@@ -33,7 +33,7 @@ import org.testng.annotations.Test;
  * @date 2023-09-01 10:57
  * @since 2.1.0
  */
-public class PemUtilTest {
+public class KeyUtilTest {
 
     @Test
     public void test() throws Exception {
@@ -44,33 +44,33 @@ public class PemUtilTest {
         {
 
             PrivateKey privateKey = keyPair.getPrivate();
-            String write = PemUtil.write(privateKey);
-            Object read = PemUtil.read(write.getBytes(), "RSA");
+            String write = KeyUtil.write(privateKey);
+            Object read = KeyUtil.read(write.getBytes(), "RSA");
             Assert.assertTrue(read instanceof PrivateKey);
 
-            read = PemUtil.readFromPEM(write.getBytes());
+            read = KeyUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof PrivateKey);
 
-            read = PemUtil.read(privateKey.getEncoded(), "RSA");
+            read = KeyUtil.read(privateKey.getEncoded(), "RSA");
             Assert.assertTrue(read instanceof PrivateKey);
 
-            read = PemUtil.read(Base64.getEncoder().encode(privateKey.getEncoded()), "RSA");
+            read = KeyUtil.read(Base64.getEncoder().encode(privateKey.getEncoded()), "RSA");
             Assert.assertTrue(read instanceof PrivateKey);
         }
 
         {
             PublicKey publicKey = keyPair.getPublic();
-            String write = PemUtil.write(publicKey);
-            Object read = PemUtil.read(write.getBytes(), "RSA");
+            String write = KeyUtil.write(publicKey);
+            Object read = KeyUtil.read(write.getBytes(), "RSA");
             Assert.assertTrue(read instanceof PublicKey);
 
-            read = PemUtil.readFromPEM(write.getBytes());
+            read = KeyUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof PublicKey);
 
-            read = PemUtil.read(publicKey.getEncoded(), "RSA");
+            read = KeyUtil.read(publicKey.getEncoded(), "RSA");
             Assert.assertTrue(read instanceof PublicKey);
 
-            read = PemUtil.read(Base64.getEncoder().encode(publicKey.getEncoded()), "RSA");
+            read = KeyUtil.read(Base64.getEncoder().encode(publicKey.getEncoded()), "RSA");
             Assert.assertTrue(read instanceof PublicKey);
         }
 
@@ -91,17 +91,17 @@ public class PemUtilTest {
             // 使用私钥对证书进行签名
             PrivateKey privateKey = keyPair.getPrivate();
             X509Certificate certificate = certGenerator.generate(privateKey);
-            String write = PemUtil.write(certificate);
-            Object read = PemUtil.read(write.getBytes(), "X.509");
+            String write = KeyUtil.write(certificate);
+            Object read = KeyUtil.read(write.getBytes(), "X.509");
             Assert.assertTrue(read instanceof X509Certificate);
 
-            read = PemUtil.readFromPEM(write.getBytes());
+            read = KeyUtil.readFromPEM(write.getBytes());
             Assert.assertTrue(read instanceof X509Certificate);
 
-            read = PemUtil.read(certificate.getEncoded(), "X.509");
+            read = KeyUtil.read(certificate.getEncoded(), "X.509");
             Assert.assertTrue(read instanceof X509Certificate);
 
-            read = PemUtil.read(Base64.getEncoder().encode(certificate.getEncoded()), "X.509");
+            read = KeyUtil.read(Base64.getEncoder().encode(certificate.getEncoded()), "X.509");
             Assert.assertTrue(read instanceof X509Certificate);
 
         }
