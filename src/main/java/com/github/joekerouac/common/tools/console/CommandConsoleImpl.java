@@ -20,10 +20,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.github.joekerouac.common.tools.constant.Const;
 import com.github.joekerouac.common.tools.enums.ErrorCodeEnum;
 import com.github.joekerouac.common.tools.exception.CommonException;
+import com.github.joekerouac.common.tools.exception.ExceptionUtil;
 import com.github.joekerouac.common.tools.log.Logger;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
@@ -75,16 +77,38 @@ public class CommandConsoleImpl implements CommandConsole {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), charset));
             BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream(), charset));
 
-            // 等待执行结束
+            AtomicReference<String> msgRef = new AtomicReference<>();
+            AtomicReference<String> errorMsgRef = new AtomicReference<>();
+            Thread msgThread = new Thread(() -> msgRef.set(read(reader)));
+            Thread errorMsgThread = new Thread(() -> errorMsgRef.set(read(errReader)));
+
+            msgThread.start();
+            errorMsgThread.start();
             try {
+                // 等待执行结束
                 process.waitFor();
             } catch (InterruptedException e) {
+                msgThread.interrupt();
+                errorMsgThread.interrupt();
                 throw new CommonException(ErrorCodeEnum.UNKNOWN_EXCEPTION, e);
             }
 
+            try {
+                msgThread.join();
+            } catch (InterruptedException e) {
+                errorMsgThread.interrupt();
+                throw new RuntimeException(e);
+            }
+
+            try {
+                errorMsgThread.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
             // 读取结果
-            String msg = read(reader);
-            String errMsg = read(errReader);
+            String msg = msgRef.get();
+            String errMsg = errorMsgRef.get();
 
             CommandResult result = new CommandResult();
             result.setExitCode(process.exitValue());
@@ -116,17 +140,20 @@ public class CommandConsoleImpl implements CommandConsole {
      * @param reader
      *            reader
      * @return 读取到的内容
-     * @throws IOException
-     *             IO异常
      */
-    private String read(BufferedReader reader) throws IOException {
+    private String read(BufferedReader reader) {
         StringBuilder msgBuilder = new StringBuilder();
         String line;
 
-        while ((line = reader.readLine()) != null) {
-            msgBuilder.append(line);
-            msgBuilder.append("\n");
+        try {
+            while ((line = reader.readLine()) != null) {
+                msgBuilder.append(line);
+                msgBuilder.append("\n");
+            }
+        } catch (Throwable throwable) {
+            msgBuilder.append(ExceptionUtil.printStack(throwable));
         }
+
         return msgBuilder.toString();
     }
 
