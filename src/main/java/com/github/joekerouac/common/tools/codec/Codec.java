@@ -36,6 +36,40 @@ public interface Codec {
 
     /**
      * 读取数据
+     *
+     * @param data
+     *            数据
+     * @param type
+     *            数据类型Class
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    default <T> T read(String data, Class<T> type) throws SerializeException {
+        return read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, type);
+    }
+
+    /**
+     * 读取数据
+     *
+     * @param data
+     *            数据
+     * @param typeReference
+     *            数据类型引用
+     * @param <T>
+     *            数据实际类型
+     * @return 读取到的数据
+     * @throws SerializeException
+     *             序列化失败应该抛出SerializeException而不是其他异常
+     */
+    default <T> T read(String data, AbstractTypeReference<T> typeReference) throws SerializeException {
+        return read(data.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8, typeReference);
+    }
+
+    /**
+     * 读取数据
      * 
      * @param data
      *            数据
@@ -254,5 +288,16 @@ public interface Codec {
      *            写出流
      */
     void write(Object data, Charset resultCharset, OutputStream outputStream);
+
+    /**
+     * 写出数据
+     *
+     * @param data
+     *            数据
+     * @return 序列化后的数据
+     */
+    default String writeAsString(Object data) {
+        return new String(write(data, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
 
 }
