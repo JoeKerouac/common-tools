@@ -258,7 +258,7 @@ public class StateFuture<T> implements CallbackFuture<T> {
 
         try {
             if (!isDone()) {
-                if (doneCondition.await(timeout, unit)) {
+                if (!doneCondition.await(timeout, unit)) {
                     throw new TimeoutException();
                 }
             }
