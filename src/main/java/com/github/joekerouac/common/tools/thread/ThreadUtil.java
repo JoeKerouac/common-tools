@@ -12,12 +12,17 @@
  */
 package com.github.joekerouac.common.tools.thread;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.github.joekerouac.common.tools.constant.ExceptionProviderConst;
 import com.github.joekerouac.common.tools.string.StringUtils;
 import com.github.joekerouac.common.tools.util.Assert;
-import com.github.joekerouac.common.tools.validator.ValidationServiceImpl;
 
 import lombok.AccessLevel;
 import lombok.CustomLog;
@@ -107,7 +112,6 @@ public class ThreadUtil {
      */
     public static ThreadPoolExecutor newThreadPool(ThreadPoolConfig config) {
         Assert.argNotNull(config, "config");
-        new ValidationServiceImpl().validate(config);
         Assert.assertTrue(
             config.getMaximumPoolSize() >= config.getCorePoolSize(), StringUtils
                 .format("传入参数有误，线程池最大大小应该大于等于核心大小，当前配置：[{}:{}]", config.getMaximumPoolSize(), config.getCorePoolSize()),

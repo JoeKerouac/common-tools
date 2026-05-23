@@ -21,8 +21,6 @@ import com.github.joekerouac.common.tools.net.http.ContentType;
 import com.github.joekerouac.common.tools.net.http.IHttpClient;
 import com.github.joekerouac.common.tools.net.http.config.IHttpConfig;
 import com.github.joekerouac.common.tools.string.StringUtils;
-import com.github.joekerouac.common.tools.validator.ValidationService;
-import com.github.joekerouac.common.tools.validator.ValidationServiceImpl;
 
 import lombok.Getter;
 
@@ -32,8 +30,6 @@ import lombok.Getter;
  * @since 2.0.3
  */
 public class IHttpGenericRequest extends AbstractIHttpRequest {
-
-    private static final ValidationService VALIDATION_SERVICE = new ValidationServiceImpl();
 
     /**
      * 待上传文件
@@ -99,7 +95,6 @@ public class IHttpGenericRequest extends AbstractIHttpRequest {
          * @return builder
          */
         public Builder addFile(UploadFile file) {
-            VALIDATION_SERVICE.validate(file);
             files.add(file);
             return this;
         }
