@@ -50,7 +50,7 @@ public class ReferenceUtils {
                         Reference<?> ref = lastRef;
                         lastRef = null;
 
-                        Runnable callback = CALLBACK_MAP.get(ref);
+                        Runnable callback = CALLBACK_MAP.remove(ref);
                         if (callback != null) {
                             try {
                                 callback.run();
