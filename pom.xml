@@ -250,6 +250,7 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <configFile>${project.basedir}/Formatter.xml</configFile>
                     <sourceDirectory>${origin.source.dir}</sourceDirectory>
+                    <lineEnding>LF</lineEnding>
                 </configuration>
                 <executions>
                     <execution>
